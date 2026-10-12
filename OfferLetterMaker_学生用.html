@@ -1,0 +1,610 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Offer Letter Maker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600&family=Source+Serif+4:wght@400;600&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/* Layout: form on the left, A4 letter preview on the right. Phone width: two tabs (入力 / プレビュー).
+   Palette: blue-grey neutrals, mikan orange accent. The letter keeps its own paper colors in both themes. */
+:root{
+  --bg:#eef1f4;
+  --surface:#ffffff;
+  --surface-2:#f4f6f8;
+  --desk:#d6dce3;
+  --fg:#1b2430;
+  --muted:#586573;
+  --line:#d3d9e0;
+  --accent:#bf5509;
+  --accent-fg:#ffffff;
+  --accent-soft:#fbeadd;
+  --ui:'Zen Kaku Gothic New',system-ui,-apple-system,'Hiragino Sans','Yu Gothic',sans-serif;
+  --doc:'Source Serif 4','Zen Kaku Gothic New',Georgia,serif;
+  --doc-sans:'Source Sans 3','Zen Kaku Gothic New',system-ui,sans-serif;
+  --paper:#ffffff;
+  --ink:#18202b;
+  --ink-muted:#566170;
+  --rule:#c8ced6;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#12161b;--surface:#1b2128;--surface-2:#222a33;--desk:#0b0e12;
+    --fg:#e6eaee;--muted:#9aa6b3;--line:#2f3943;
+    --accent:#f08a3c;--accent-fg:#1a1006;--accent-soft:#33241a;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12161b;--surface:#1b2128;--surface-2:#222a33;--desk:#0b0e12;
+  --fg:#e6eaee;--muted:#9aa6b3;--line:#2f3943;
+  --accent:#f08a3c;--accent-fg:#1a1006;--accent-soft:#33241a;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--ui);font-size:15px;line-height:1.6;padding-inline:16px;padding-block:16px 40px}
+.app{max-width:1280px;margin:0 auto}
+.top{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 16px;margin-block-end:16px}
+h1{font-size:20px;line-height:1.3;margin:0;font-weight:700}
+.sub{margin:0;color:var(--muted);font-size:13px}
+.tabs{display:none}
+.layout{display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr);gap:24px;align-items:start}
+.pane-form,.pane-preview{min-width:0}
+
+fieldset{border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:6px 16px 16px;margin:0 0 16px;min-width:0}
+legend{font-weight:700;font-size:14px;padding-inline:6px}
+.stack{display:grid;gap:12px;margin-top:8px}
+.row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+label{display:grid;gap:4px;font-size:13px;color:var(--muted);min-width:0}
+label i{font-style:normal;font-size:12px;opacity:.85}
+input,select,textarea{width:100%;min-width:0;font:inherit;font-size:16px;color:var(--fg);background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:9px 10px}
+textarea{resize:vertical}
+input:focus-visible,select:focus-visible,textarea:focus-visible,.btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.hint{font-size:13px;line-height:1.6;border-radius:6px;background:var(--accent-soft);padding:10px 12px;color:var(--fg)}
+.hint b{display:block;font-size:12px;color:var(--muted);margin-top:4px}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px 12px;margin:0;padding:12px;border-radius:6px;background:var(--surface-2)}
+.readout dt{font-size:12px;color:var(--muted)}
+.readout dd{margin:0;font-weight:700;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+
+.btn{font:inherit;font-weight:700;font-size:14px;border-radius:6px;padding:10px 14px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer}
+.btn:hover:not(:disabled){border-color:var(--muted)}
+.btn:disabled{opacity:.55;cursor:default}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.banner{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between;padding:10px 12px;margin-bottom:16px;border-radius:8px;background:var(--accent-soft);font-size:13px}
+.banner[hidden]{display:none}
+.banner .btn{padding:6px 10px;font-size:13px}
+.narrow-only{display:none}
+
+.actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.chip{font-size:12px;font-weight:700;padding:4px 10px;border-radius:99px;background:var(--surface);border:1px solid var(--line);color:var(--muted)}
+.chip.ok{color:var(--fg)}
+.status{min-height:1.6em;margin:0 0 8px;font-size:13px;color:var(--muted)}
+.copybox{margin-bottom:10px}
+.copybox textarea{min-height:140px;font-size:13px}
+.desk{background:var(--desk);border-radius:8px;padding:16px}
+.sheet-wrap{width:100%;max-width:794px;margin-inline:auto;overflow:hidden}
+
+/* The letter (A4 at 96dpi = 794 x 1123 px) */
+.sheet{width:794px;min-height:1123px;padding:60px 64px 52px;background:var(--paper);color:var(--ink);font:400 14px/1.6 var(--doc);transform-origin:0 0;box-shadow:0 1px 3px rgba(0,0,0,.2),0 8px 28px rgba(0,0,0,.18);display:flex;flex-direction:column;gap:22px}
+.sheet *{box-sizing:border-box}
+.s-head{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;padding-bottom:16px;border-bottom:2px solid var(--ink)}
+.s-from{min-width:0}
+.s-from .name{font-size:19px;font-weight:600;line-height:1.35}
+.s-from .addr{color:var(--ink-muted);font-size:13px;margin-top:4px}
+.s-title{font:600 22px/1 var(--doc-sans);letter-spacing:.14em;text-transform:uppercase;white-space:nowrap}
+.s-intro{display:grid;gap:10px}
+.jp{display:block;font:400 10.5px/1.4 var(--ui);letter-spacing:0;text-transform:none;color:var(--ink-muted)}
+label.check{display:flex;flex-direction:row;align-items:center;gap:6px;color:var(--fg);font-size:13px;cursor:pointer}
+label.check input{width:auto}
+.s-meta{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:24px;align-items:start}
+.lab{font:600 10.5px/1.4 var(--doc-sans);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-muted)}
+.s-meta dl{margin:0;display:grid;grid-template-columns:auto auto;gap:4px 16px;font-size:13px}
+.s-meta dd{margin:0;font-variant-numeric:tabular-nums}
+.s-subject{font-weight:600}
+.s-table{width:100%;border-collapse:collapse;font-size:13.5px}
+.s-table th{font:600 10.5px/1.4 var(--doc-sans);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-muted);text-align:left;padding:8px 10px;border-top:1.5px solid var(--ink);border-bottom:1px solid var(--rule)}
+.s-table td{padding:12px 10px;vertical-align:top;border-bottom:1px solid var(--rule)}
+.s-table .num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.s-table th.num{text-align:right}
+.s-table tfoot td{border-bottom:1.5px solid var(--ink);font-weight:600}
+.s-table small{display:block;font-size:11.5px;color:var(--ink-muted);font-weight:400}
+.s-terms{display:grid;grid-template-columns:9.5em minmax(0,1fr);gap:8px 16px;margin:0}
+.s-terms dt{font:600 10.5px/1.9 var(--doc-sans);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-muted)}
+.s-terms dd{margin:0;overflow-wrap:anywhere}
+.s-sign{margin-top:auto}
+.s-sign .sig{height:46px;width:240px;border-bottom:1px solid var(--ink-muted);margin-bottom:4px}
+.blank{display:inline-block;min-width:11em;height:1.15em;border-bottom:1px solid var(--ink-muted);vertical-align:baseline}
+.s-table .blank{min-width:4.5em}
+.opts{font-size:11px;color:var(--ink-muted);margin-left:8px}
+
+@media (max-width:899px){
+  .layout{grid-template-columns:minmax(0,1fr)}
+  .tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:8px;margin-bottom:8px}
+  .tab[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+  .app[data-view="form"] .pane-preview{display:none}
+  .app[data-view="preview"] .pane-form{display:none}
+  .narrow-only{display:block}
+  .desk{padding:8px}
+}
+@media (min-width:900px){
+  .pane-preview{position:sticky;top:16px;max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);overflow:auto}
+}
+
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font:14px/1.5 var(--ui)}
+#printHost{display:none}
+@media print{
+  html,body{background:#fff!important}
+  body>*{display:none!important}
+  body>#printHost{display:block!important}
+  #printHost .sheet{width:100%;min-height:0;padding:0;box-shadow:none;transform:none;gap:9px;font-size:12.5px;line-height:1.5;zoom:.9}
+  #printHost .s-table td{padding:6px 10px}
+  #printHost .s-terms{gap:3px 16px}
+  #printHost .s-sign{break-inside:avoid;margin-top:12px}
+  #printHost .s-sign .sig{height:26px}
+  @page{size:A4;margin:10mm 14mm}
+}
+</style>
+</head><body>
+
+<div class="app" id="app" data-view="form">
+  <header class="top">
+    <h1>Offer Letter Maker</h1>
+    <p class="sub">原価計算で決めた単価・数量・Incotermsを入力すると、A4のOffer Letterがその場でできます。</p>
+  </header>
+
+  <div class="tabs" role="group" aria-label="表示の切り替え">
+    <button type="button" class="btn tab" id="tabForm" aria-pressed="true">入力</button>
+    <button type="button" class="btn tab" id="tabPrev" aria-pressed="false">プレビュー</button>
+  </div>
+
+  <div class="layout">
+    <section class="pane-form" aria-label="入力フォーム">
+      <div class="banner" id="banner">
+        <span>入力例が入っています。自分のグループの内容に書き換えてください。</span>
+        <button type="button" class="btn" id="clearAll">全項目をクリア</button>
+      </div>
+
+      <fieldset>
+        <legend>商品・数量・価格</legend>
+        <div class="stack">
+          <label for="product"><span>商品名・型番 <i>Model</i></span>
+            <input id="product" data-k="product" type="text" autocomplete="off"></label>
+          <label for="pack"><span>梱包仕様 <i>Packing</i></span>
+            <input id="pack" data-k="pack" type="text" autocomplete="off"></label>
+          <div class="row">
+            <label for="qty"><span>数量 <i>Quantity</i></span>
+              <input id="qty" data-k="qty" type="number" inputmode="decimal" step="any" min="0"></label>
+            <label for="unit"><span>単位 <i>Unit</i></span>
+              <input id="unit" data-k="unit" type="text" autocomplete="off"></label>
+          </div>
+          <div class="row">
+            <label for="cur"><span>通貨 <i>Currency</i></span>
+              <select id="cur" data-k="cur">
+                <option>USD</option><option>EUR</option><option>JPY</option><option>GBP</option>
+              </select></label>
+            <label for="price"><span>単価（1単位あたり） <i>Unit price</i></span>
+              <input id="price" data-k="price" type="number" inputmode="decimal" step="any" min="0"></label>
+          </div>
+          <dl class="readout" aria-live="polite">
+            <div><dt>合計金額（数量 × 単価）</dt><dd id="roTotal">—</dd></div>
+          </dl>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>取引条件</legend>
+        <div class="stack">
+          <label for="rule"><span>貿易条件 <i>Trade Terms</i></span>
+            <select id="rule" data-k="rule"></select></label>
+          <div class="hint" id="ruleHint" aria-live="polite"></div>
+          <label for="place"><span id="placeLabel">指定地 <i>Named place</i></span>
+            <input id="place" data-k="place" type="text" autocomplete="off"></label>
+          <div class="row">
+            <label for="pol"><span>輸出港 <i>Port of Shipment</i></span>
+              <input id="pol" data-k="pol" type="text" list="dlPol" autocomplete="off"></label>
+            <label for="pod"><span>輸入港 <i>Port of Destination</i></span>
+              <input id="pod" data-k="pod" type="text" list="dlPod" autocomplete="off"></label>
+          </div>
+          <label for="shipment"><span>船積時期 <i>Time of Shipment</i></span>
+            <input id="shipment" data-k="shipment" type="text" list="dlShip" autocomplete="off"></label>
+          <label for="insurance"><span>保険 <i>Insurance</i></span>
+            <input id="insurance" data-k="insurance" type="text" list="dlIns" autocomplete="off"></label>
+          <label for="quality"><span>品質条件 <i>Quality</i></span>
+            <input id="quality" data-k="quality" type="text" list="dlQual" autocomplete="off"></label>
+          <label for="payment"><span>決済条件 <i>Payment Terms</i></span>
+            <input id="payment" data-k="payment" type="text" list="dlPay" autocomplete="off"></label>
+          <label for="validity"><span>返事の期限（確定申し込みの回答期限） <i>Acceptance reaching us by</i></span>
+            <input id="validity" data-k="validity" type="date"></label>
+        </div>
+        <datalist id="dlPol"><option value="Shimizu, Japan"><option value="Yokohama, Japan"><option value="Nagoya, Japan"></datalist>
+        <datalist id="dlPod"><option value="Los Angeles, USA"><option value="Singapore"><option value="Busan, Korea"><option value="Rotterdam, Netherlands"></datalist>
+        <datalist id="dlShip"><option value="Within 30 days after receipt of payment"><option value="Within 30 days after receipt of L/C"><option value="December 2026"></datalist>
+        <datalist id="dlIns"><option value="To be covered by the seller (110% of invoice value)"><option value="To be covered by the buyer"></datalist>
+        <datalist id="dlQual"><option value="As per seller's sample"><option value="Standard export quality"></datalist>
+        <datalist id="dlPay"><option value="T/T in advance"><option value="T/T 30% advance, balance before shipment"><option value="At sight draft under an irrevocable L/C"><option value="D/P at sight"></datalist>
+      </fieldset>
+
+      <fieldset>
+        <legend>売り手・買い手</legend>
+        <div class="stack">
+          <label for="sellerName"><span>売り手 <i>Seller</i></span>
+            <input id="sellerName" data-k="sellerName" type="text" autocomplete="off"></label>
+          <label for="sellerAddr"><span>売り手の住所 <i>Address</i></span>
+            <textarea id="sellerAddr" data-k="sellerAddr" rows="2"></textarea></label>
+          <div class="row">
+            <label for="sellerMail"><span>連絡先メール <i>E-mail</i></span>
+              <input id="sellerMail" data-k="sellerMail" type="text" autocomplete="off"></label>
+            <label for="signer"><span>署名者 <i>Name / title</i></span>
+              <input id="signer" data-k="signer" type="text" autocomplete="off"></label>
+          </div>
+          <label for="buyerName"><span>買い手 <i>Buyer</i></span>
+            <input id="buyerName" data-k="buyerName" type="text" autocomplete="off"></label>
+          <label for="buyerAttn"><span>担当者 <i>Attention</i></span>
+            <input id="buyerAttn" data-k="buyerAttn" type="text" autocomplete="off"></label>
+          <label for="buyerAddr"><span>買い手の住所 <i>Address</i></span>
+            <textarea id="buyerAddr" data-k="buyerAddr" rows="2"></textarea></label>
+          <div class="row">
+            <label for="offerNo"><span>書類番号 <i>Ref. No.</i></span>
+              <input id="offerNo" data-k="offerNo" type="text" autocomplete="off"></label>
+            <label for="date"><span>作成日 <i>Date</i></span>
+              <input id="date" data-k="date" type="date"></label>
+          </div>
+          <label for="inquiry"><span>引合い（Inquiry）を受けた日（任意） <i>Inquiry date</i></span>
+            <input id="inquiry" data-k="inquiry" type="date"></label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>備考</legend>
+        <div class="stack">
+          <label for="remarks"><span>備考 <i>Remarks</i></span>
+            <textarea id="remarks" data-k="remarks" rows="2"></textarea></label>
+        </div>
+      </fieldset>
+
+      <div class="narrow-only"><button type="button" class="btn primary" id="toPreview" style="width:100%">プレビューを見る</button></div>
+    </section>
+
+    <section class="pane-preview" aria-label="Offer Letterのプレビュー">
+      <div class="actions">
+        <button type="button" class="btn primary" id="btnPdf">PDFで保存（印刷）</button>
+        <button type="button" class="btn" id="btnCopy">テキストをコピー</button>
+        <button type="button" class="btn" id="btnBlank">手書き用の白紙をPDFで保存（印刷）</button>
+        <span class="chip" id="chip">—</span>
+        <label class="check" for="gloss"><input id="gloss" type="checkbox"> 日本語の注釈を付ける</label>
+      </div>
+      <p class="status" id="status" role="status"></p>
+      <div class="copybox" id="copybox" hidden><textarea id="copyTa" readonly aria-label="コピー用テキスト"></textarea></div>
+      <div class="desk">
+        <div class="sheet-wrap" id="wrap"><div class="sheet" id="sheet"></div></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div id="printHost"></div>
+<script>
+(function(){
+  'use strict';
+  var KEY = 'offer-letter-maker-student-v1';
+  var PREM = "Seller's premises, Shizuoka, Japan";
+
+  /* Incoterms 2020: hint text, named-place type, rough list of cost items the seller covers */
+  var RULES = {
+    EXW:{kind:'prem',  hint:'売り手の構内で引き渡す。積込み・国内輸送・輸出通関は買い手側が手配。', cost:'仕入原価＋梱包'},
+    FCA:{kind:'prem',  hint:'指定地で買い手の運送人に引き渡す。輸出通関は売り手。', cost:'仕入原価＋梱包＋国内輸送＋輸出通関・書類'},
+    FAS:{kind:'origin',hint:'本船の船側に置いた時点で引き渡す（海上輸送のみ）。輸出通関は売り手。', cost:'FCAの費用＋積地港での費用（積込み前まで）'},
+    FOB:{kind:'origin',hint:'本船に積み込んだ時点で引き渡し、危険も移る（海上輸送のみ）。輸出通関は売り手。', cost:'仕入原価＋梱包＋国内輸送＋輸出通関・書類＋積地港の費用（ターミナル関連）'},
+    CFR:{kind:'dest',  hint:'売り手が仕向港までの海上運賃を負担。危険は本船積込み時に移る。', cost:'FOBの費用＋海上運賃'},
+    CIF:{kind:'dest',  hint:'CFRに加え、売り手が海上保険を手配・負担。危険は本船積込み時に移る。', cost:'FOBの費用＋海上運賃＋保険料'},
+    CPT:{kind:'dest',  hint:'売り手が仕向地までの運送費を負担。危険は最初の運送人に引き渡した時に移る。', cost:'FCAの費用＋仕向地までの運賃'},
+    CIP:{kind:'dest',  hint:'CPTに加え、売り手が貨物保険を手配・負担。', cost:'FCAの費用＋仕向地までの運賃＋保険料'},
+    DAP:{kind:'dest',  hint:'仕向地で荷卸しの準備ができた状態で引き渡す。輸入通関・関税は買い手。', cost:'仕向地までの全費用（輸入通関・関税を除く）'},
+    DPU:{kind:'dest',  hint:'仕向地で荷卸しまで行って引き渡す。輸入通関・関税は買い手。', cost:'DAPの費用＋荷卸し費用'},
+    DDP:{kind:'dest',  hint:'輸入通関・関税・税も売り手が負担する。売り手の負担が最大。', cost:'仕向地までの全費用＋輸入通関・関税・税'}
+  };
+  var PLACE_LABEL = {
+    prem:'引渡地 <i>Named place of delivery</i>',
+    origin:'積地港 <i>Named port of shipment</i>',
+    dest:'仕向港・仕向地 <i>Named place of destination</i>',
+    none:'指定地 <i>Named place</i>'
+  };
+  var REQUIRED = ['sellerName','buyerName','product','qty','price','rule','place','pol','pod','shipment','payment','validity'];
+
+  function pad(n){return String(n).padStart(2,'0');}
+  function iso(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+  var now = new Date();
+  var plus14 = new Date(now.getFullYear(), now.getMonth(), now.getDate()+14);
+
+  var CLASS = {
+    product:'Canned Mandarin Oranges',
+    pack:'24 cans (425 g each) per export carton',
+    qty:'', unit:'cases', cur:'USD', price:'',
+    rule:'FOB', place:'Shimizu, Japan', pol:'Shimizu, Japan', pod:'Shanghai, China',
+    insurance:'To be covered by the buyer',
+    quality:"As per seller's sample",
+    shipment:'',
+    payment:'T/T in advance (100% before shipment)',
+    validity:'',
+    sellerName:'', sellerAddr:'', sellerMail:'', signer:'',
+    buyerName:'SH TRADING CO., LTD.', buyerAttn:'Mr. Li Wei, Purchasing Manager',
+    buyerAddr:'100 Example Road, Shanghai, China',
+    offerNo:'', date:'', inquiry:'', remarks:'', gloss:'1'
+  };
+  var EXAMPLE = {
+    product:'Mikan Jelly',
+    pack:'12 pcs (160 g each) per export carton',
+    qty:'4800', unit:'cases', cur:'USD', price:'9.33',
+    rule:'FOB', place:'Shimizu, Japan', pol:'Shimizu, Japan', pod:'Shanghai, China',
+    insurance:'To be covered by the buyer',
+    quality:"As per seller's sample",
+    shipment:'Within 30 days after receipt of payment',
+    payment:'T/T in advance (100% before shipment)',
+    validity:iso(plus14),
+    sellerName:'Example Trading Co., Ltd.', sellerAddr:'1-1 Example-cho, Shizuoka, Japan',
+    sellerMail:'sales@example.com', signer:'Taro Shizuoka, Sales Manager',
+    buyerName:'SH TRADING CO., LTD.', buyerAttn:'Mr. Li Wei, Purchasing Manager',
+    buyerAddr:'100 Example Road, Shanghai, China',
+    offerNo:'OFR-'+now.getFullYear()+'-001', date:iso(now),
+    inquiry:iso(new Date(now.getFullYear(), now.getMonth(), now.getDate()-7)),
+    remarks:'', gloss:'1'
+  };
+  var SAMPLE = CLASS;
+  var EMPTY = Object.assign({}, CLASS);
+
+  var S = null, sampleOn = false, lastSuggest = '', lastIns = '';
+  try{
+    var saved = localStorage.getItem(KEY);
+    if(saved){ S = Object.assign({}, EMPTY, JSON.parse(saved)); }
+  }catch(_){}
+  if(!S){ S = Object.assign({}, SAMPLE); sampleOn = false; }
+
+  function $(id){return document.getElementById(id);}
+  var app=$('app'), sheet=$('sheet'), wrap=$('wrap'), statusEl=$('status');
+
+  /* ---------- helpers ---------- */
+  function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function num(x){var n=parseFloat(String(x==null?'':x).replace(/,/g,''));return isFinite(n)?n:NaN;}
+  function fmt(x,min,max){return x.toLocaleString('en-US',{minimumFractionDigits:min,maximumFractionDigits:max});}
+  function money(x,cur){var d=cur==='JPY'?0:2;return fmt(x,d,d);}
+  var MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  function dateFmt(s){
+    if(!s) return '';
+    var p=s.split('-').map(Number);
+    if(p.length!==3||!p[0]) return '';
+    return p[2]+' '+MONTHS[p[1]-1]+' '+p[0];
+  }
+  function suggestIns(rule){
+    if(rule==='CIF'||rule==='CIP') return 'To be covered by the seller (110% of invoice value)';
+    if(rule==='DAP'||rule==='DPU'||rule==='DDP'||!RULES[rule]) return '';
+    return 'To be covered by the buyer';
+  }
+  function suggest(rule){
+    var r=RULES[rule]; if(!r) return '';
+    if(r.kind==='origin') return S.pol;
+    if(r.kind==='dest') return S.pod;
+    return PREM;
+  }
+
+  /* ---------- the letter ---------- */
+  function letter(d, blank){
+    var L='<span class="blank"></span>';
+    var gl=!!d.gloss;
+    function jp(t){return gl?'<span class="jp">'+t+'</span>':'';}
+    function v(x){var t=(!blank&&x!=null)?String(x).trim():'';return t?esc(t):L;}
+    function ml(x,n){
+      var t=blank?'':String(x||'').trim();
+      if(!t){var a=[];for(var i=0;i<n;i++)a.push(L);return a.join('<br>');}
+      return t.split(/\n/).map(esc).join('<br>');
+    }
+    var qty=blank?NaN:num(d.qty), price=blank?NaN:num(d.price);
+    var cur=blank?'':d.cur;
+    var unit=(!blank&&String(d.unit||'').trim())||'';
+    var per=unit?unit.replace(/s$/i,''):'unit';
+    var total=qty*price;
+    var rule=blank?'':d.rule, place=blank?'':String(d.place||'').trim();
+
+    var qtyCell=isFinite(qty)?fmt(qty,0,3)+(unit?' '+esc(unit):''):L;
+    var priceCell=isFinite(price)&&cur?esc(cur)+' '+money(price,cur)+'<small>per '+esc(per)+'</small>':L;
+    var totalCell=isFinite(total)&&cur?esc(cur)+' '+money(total,cur):L;
+    var termText = blank
+      ? L+'<span class="opts">EXW / FCA / FOB / CFR / CIF</span>'
+      : (rule&&place ? esc(rule+' '+place) : v(rule)+' '+v(place));
+    var hdrTerm = rule ? ' ('+esc(rule)+')' : '';
+
+    var inquiry = blank ? '' : dateFmt(d.inquiry);
+    var reply = (blank||!d.validity) ? L : '<b>'+esc(dateFmt(d.validity))+'</b>';
+    var remarks = String(d.remarks||'').trim();
+
+    var terms=[
+      ['Trade Terms','貿易条件（どこの港まで？）',termText],
+      ['Port of Shipment','輸出港',v(d.pol)],
+      ['Port of Destination','輸入港',v(d.pod)],
+      ['Payment Terms','決済条件',v(d.payment)],
+      ['Time of Shipment','船積時期',v(d.shipment)],
+      ['Insurance','保険',v(d.insurance)],
+      ['Packing','包装',v(d.pack)]
+    ];
+    if(blank||String(d.quality||'').trim()) terms.push(['Quality','品質条件',v(d.quality)]);
+    if(blank||remarks) terms.push(['Remarks','備考',blank?ml('',2):ml(remarks,1)]);
+
+    var salutation = (!blank&&String(d.buyerAttn||'').trim()) ? 'Dear '+esc(String(d.buyerAttn).trim().split(',')[0])+',' : 'Dear Sir or Madam,';
+    var mail = (!blank&&String(d.sellerMail||'').trim()) ? '<br>'+esc(String(d.sellerMail).trim()) : '';
+    var inquiryP = (blank||inquiry)
+      ? '<p style="margin:0">Thank you very much for your inquiry of '+(inquiry?'<b>'+esc(inquiry)+'</b>':L)+'.'+(gl?'<span class="jp">いつ、Inquiry（引合い）をもらったか</span>':'')+'</p>'
+      : '';
+
+    return ''
+    + '<div class="s-head">'
+    +   '<div class="s-from"><div class="name">'+v(d.sellerName)+'</div>'
+    +   '<div class="addr">'+(blank?ml('',2):ml(d.sellerAddr,1))+mail+'</div></div>'
+    +   '<div class="s-title">Offer Letter</div>'
+    + '</div>'
+    + '<div class="s-meta">'
+    +   '<div><div class="lab">To</div>'
+    +     '<div><b>'+v(d.buyerName)+'</b></div>'
+    +     '<div>Attn: '+v(d.buyerAttn)+'</div>'
+    +     '<div>'+(blank?ml('',2):ml(d.buyerAddr,1))+'</div></div>'
+    +   '<dl><dt class="lab">Date</dt><dd>'+v(blank?'':dateFmt(d.date))+'</dd>'
+    +     '<dt class="lab">Ref. No.</dt><dd>'+v(d.offerNo)+'</dd></dl>'
+    + '</div>'
+    + '<div class="s-intro">'
+    +   '<p style="margin:0">'+salutation+'</p>'
+    +   '<p class="s-subject" style="margin:0">Subject: Offer for '+v(d.product)+'</p>'
+    +   inquiryP
+    +   '<p style="margin:0">We are pleased to offer you firm, subject to your acceptance reaching us by '+reply+', as follows:'+(gl?'<span class="jp">いつまでに返事がほしいか</span>':'')+'</p>'
+    + '</div>'
+    + '<table class="s-table"><thead><tr>'
+    +   '<th>Model</th><th class="num">Quantity</th><th class="num">Unit Price'+hdrTerm+'</th><th class="num">Amount</th></tr></thead>'
+    +   '<tbody><tr><td>'+v(d.product)+'</td><td class="num">'+qtyCell+'</td><td class="num">'+priceCell+'</td><td class="num">'+totalCell+'</td></tr></tbody>'
+    +   '<tfoot><tr><td colspan="3" class="num">TOTAL</td><td class="num">'+totalCell+'</td></tr></tfoot></table>'
+    + '<dl class="s-terms">'+terms.map(function(t){return '<dt>'+t[0]+jp(t[1])+'</dt><dd>'+t[2]+'</dd>';}).join('')+'</dl>'
+    + '<p style="margin:0">We look forward to receiving your favorable reply soon.</p>'
+    + '<div class="s-sign"><p style="margin:0 0 4px">Sincerely,</p>'
+    +   '<div class="sig"></div>'+(gl?'<span class="jp" style="margin:-2px 0 4px">サイン</span>':'')
+    +   '<div><b>'+v(d.sellerName)+'</b></div><div>'+v(d.signer)+'</div></div>';
+  }
+
+  function plain(d){
+    var qty=num(d.qty), price=num(d.price), total=qty*price, cur=d.cur;
+    var unit=String(d.unit||'').trim(), per=unit?unit.replace(/s$/i,''):'unit';
+    function t(x){var s=String(x||'').trim();return s||'________';}
+    var lines=[
+      'OFFER LETTER','',
+      t(d.sellerName), String(d.sellerAddr||'').trim(), String(d.sellerMail||'').trim(),'',
+      'Date: '+(dateFmt(d.date)||'________'), 'Ref. No.: '+t(d.offerNo),'',
+      'To: '+t(d.buyerName), 'Attn: '+t(d.buyerAttn), String(d.buyerAddr||'').trim(),'',
+      'Dear '+(String(d.buyerAttn||'').trim().split(',')[0]||'Sir or Madam')+',',
+      'Subject: Offer for '+t(d.product),''
+    ];
+    if(d.inquiry) lines.push('Thank you very much for your inquiry of '+dateFmt(d.inquiry)+'.');
+    lines.push(
+      'We are pleased to offer you firm, subject to your acceptance reaching us by '+(d.validity?dateFmt(d.validity):'________')+', as follows:','',
+      'Model: '+t(d.product),
+      'Quantity: '+(isFinite(qty)?fmt(qty,0,3)+' '+unit:'________'),
+      'Unit Price ('+(d.rule||'Incoterms')+'): '+(isFinite(price)?cur+' '+money(price,cur)+' per '+per:'________'),
+      'TOTAL: '+(isFinite(total)?cur+' '+money(total,cur):'________'),'',
+      'Trade Terms: '+((d.rule&&d.place)?d.rule+' '+d.place:'________'),
+      'Port of Shipment: '+t(d.pol),
+      'Port of Destination: '+t(d.pod),
+      'Payment Terms: '+t(d.payment),
+      'Time of Shipment: '+t(d.shipment),
+      'Insurance: '+t(d.insurance),
+      'Packing: '+t(d.pack)
+    );
+    if(String(d.quality||'').trim()) lines.push('Quality: '+String(d.quality).trim());
+    if(String(d.remarks||'').trim()) lines.push('Remarks: '+String(d.remarks).trim());
+    lines.push('','We look forward to receiving your favorable reply soon.','','Sincerely,',t(d.sellerName),String(d.signer||'').trim());
+    return lines.filter(function(l,i,a){return !(l===''&&a[i-1]==='');}).join('\n');
+  }
+
+  /* ---------- render ---------- */
+  function fit(){
+    var w=wrap.clientWidth; if(!w) return;
+    var s=Math.min(1,w/794);
+    sheet.style.transform='scale('+s+')';
+    wrap.style.height=Math.ceil(sheet.offsetHeight*s)+'px';
+  }
+  function render(){
+    sheet.innerHTML=letter(S,false);
+    var q=num(S.qty), p=num(S.price);
+    $('roTotal').textContent=(isFinite(q)&&isFinite(p))?S.cur+' '+money(q*p,S.cur):'—';
+    var r=RULES[S.rule];
+    $('ruleHint').innerHTML=r?esc(r.hint)+'<b>原価に含める費目の目安</b>'+esc(r.cost):'貿易条件を選ぶと、売り手の負担範囲と原価に含める費目の目安が出ます。';
+    $('placeLabel').innerHTML=PLACE_LABEL[r?r.kind:'none'];
+    var miss=REQUIRED.filter(function(k){return !String(S[k]==null?'':S[k]).trim();}).length;
+    var chip=$('chip');
+    chip.textContent=miss?'未入力 '+miss+'項目':'必須項目 入力済み';
+    chip.className='chip'+(miss?'':' ok');
+    fit();
+  }
+  var saveTimer=null;
+  function persist(){
+    clearTimeout(saveTimer);
+    saveTimer=setTimeout(function(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(_){}} ,300);
+  }
+  function say(m){statusEl.textContent=m||'';}
+
+  /* ---------- form binding ---------- */
+  var ruleSel=$('rule');
+  ruleSel.innerHTML='<option value="">選択してください</option>'+Object.keys(RULES).map(function(k){return '<option value="'+k+'">'+k+'</option>';}).join('');
+  function fillInputs(){
+    document.querySelectorAll('[data-k]').forEach(function(el){el.value=S[el.dataset.k]==null?'':S[el.dataset.k];});
+    $('gloss').checked=!!S.gloss;
+  }
+  fillInputs();
+  lastSuggest=suggest(S.rule); lastIns=suggestIns(S.rule);
+
+  function onInput(e){
+    var el=e.target, k=el.dataset.k; if(!k) return;
+    S[k]=el.value;
+    if(k==='rule'||k==='pol'||k==='pod'){
+      var s=suggest(S.rule);
+      if(!String(S.place||'').trim()||S.place===lastSuggest){S.place=s;$('place').value=s;}
+      lastSuggest=s;
+    }
+    if(k==='rule'){
+      var si=suggestIns(S.rule);
+      if(!String(S.insurance||'').trim()||S.insurance===lastIns){S.insurance=si;$('insurance').value=si;}
+      lastIns=si;
+    }
+    if(sampleOn){sampleOn=false;$('banner').hidden=true;}
+    render(); persist();
+  }
+  document.querySelectorAll('[data-k]').forEach(function(el){
+    el.addEventListener('input',onInput);
+    el.addEventListener('change',onInput);
+  });
+  $('gloss').addEventListener('change',function(e){S.gloss=e.target.checked?'1':'';render();persist();});
+  $('banner').hidden=!sampleOn;
+  $('clearAll').addEventListener('click',function(){
+    S=Object.assign({},EMPTY); sampleOn=false; lastSuggest=S.place; lastIns=S.insurance;
+    $('banner').hidden=true; fillInputs(); render(); persist(); say('全項目をクリアしました。');
+  });
+
+  /* ---------- tabs (phone) ---------- */
+  function view(v){
+    app.dataset.view=v;
+    $('tabForm').setAttribute('aria-pressed',v==='form');
+    $('tabPrev').setAttribute('aria-pressed',v==='preview');
+    window.scrollTo(0,0);
+    setTimeout(fit,0);
+  }
+  $('tabForm').addEventListener('click',function(){view('form');});
+  $('tabPrev').addEventListener('click',function(){view('preview');});
+  $('toPreview').addEventListener('click',function(){view('preview');});
+  if(window.ResizeObserver){new ResizeObserver(fit).observe(wrap);}
+  window.addEventListener('resize',fit);
+
+  /* ---------- copy text ---------- */
+  $('btnCopy').addEventListener('click',function(){
+    var txt=plain(S), box=$('copybox'), ta=$('copyTa');
+    var done=function(){box.hidden=true;say('テキストをコピーしました。');};
+    var manual=function(){box.hidden=false;ta.value=txt;ta.focus();ta.select();say('自動でコピーできませんでした。表示されたテキストを選択してコピーしてください。');};
+    try{
+      if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(done,manual);}
+      else manual();
+    }catch(_){manual();}
+  });
+
+  /* ---------- PDF (browser print) ---------- */
+  function printSheet(blank){
+    var host=$('printHost');
+    host.innerHTML='<div class="sheet">'+letter(blank?EMPTY:S,blank)+'</div>';
+    var old=document.title;
+    var no=String(S.offerNo||'draft').replace(/[^A-Za-z0-9_-]+/g,'_');
+    document.title=blank?'OfferLetter_blank_form':'OfferLetter_'+no;
+    var restore=function(){document.title=old;};
+    window.addEventListener('afterprint',restore,{once:true});
+    setTimeout(restore,60000);
+    say('印刷画面が開きます。送信先（プリンター）で「PDFに保存」を選んでください。');
+    setTimeout(function(){window.print();},80);
+  }
+  $('btnPdf').addEventListener('click',function(){printSheet(false);});
+  $('btnBlank').addEventListener('click',function(){printSheet(true);});
+
+  render();
+})();
+</script>
+
+</body></html>
