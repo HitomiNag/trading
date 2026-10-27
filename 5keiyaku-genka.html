@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>原価計算フォーム</title>
+<style>
+:root{--fg:#1d2733;--sub:#5b6773;--line:#d9dee3;--ac:#1a5fb4;--ok:#1b7a3d;--ng:#b3261e;--bg:#fff;--soft:#f4f6f8}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;font-size:18px;line-height:1.6}
+main{max-width:640px;margin:0 auto;padding:16px 16px 80px}
+h1{font-size:22px;margin:8px 0 4px}
+.sub{color:var(--sub);font-size:16px;margin:0 0 12px}
+.card{background:var(--soft);border-radius:10px;padding:12px 14px;margin:12px 0}
+.card h2{font-size:17px;margin:0 0 6px}
+.card table{width:100%;border-collapse:collapse;font-size:17px}
+.card td{padding:2px 0}.card td:last-child{text-align:right;white-space:nowrap}
+.rate{display:flex;align-items:center;gap:8px;margin:6px 0 0}
+.rate input{width:90px;flex:none;font-size:20px;padding:6px 8px}
+.bar{height:8px;background:var(--line);border-radius:4px;margin:10px 0}
+.bar i{display:block;height:100%;background:var(--ac);border-radius:4px;width:0;transition:width .3s}
+.step{border:1px solid var(--line);border-radius:10px;padding:14px;margin:12px 0}
+.step.done{background:#f3faf5;border-color:#b9dcc4}
+.step.lock{opacity:.45}
+.q{font-weight:700;margin:2px 0 4px}
+.how{color:var(--sub);font-size:16px;margin:0 0 8px}
+.row{display:flex;gap:8px}
+input{flex:1;min-width:0;font-size:20px;padding:10px;border:2px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg)}
+button{font-size:18px;padding:10px 16px;border:0;border-radius:8px;background:var(--ac);color:#fff}
+button.g{background:var(--soft);color:var(--fg);border:1px solid var(--line)}
+.msg{margin:8px 0 0;font-size:17px}
+.msg.ok{color:var(--ok);font-weight:700}.msg.ng{color:var(--ng)}
+.hint{display:none;background:#fff8e1;border-radius:8px;padding:8px 10px;margin-top:8px;font-size:16px}
+.fin{border:2px solid var(--ac);border-radius:10px;padding:14px;margin:16px 0;display:none}
+.fin pre{white-space:pre-wrap;word-break:break-all;background:var(--soft);padding:10px;border-radius:8px;font-size:18px;margin:8px 0}
+</style></head><body><main>
+<h1>原価計算フォーム</h1>
+<p class="sub">答えは「数字＋単位」で入力。単位がないと不正解です。<br>通貨は数字の前、数量の単位は後ろ。<br>例：<b>JPY 2,640</b>　<b>USD 16.71</b>　<b>1,900 ctn</b></p>
+<div class="card"><h2>使う数字の表（今日の商品：みかん缶・20フィートコンテナ）</h2>
+<table>
+<tr><td>1ケースの容積</td><td>0.01685 m³</td></tr>
+<tr><td>コンテナの容積</td><td>33 m³</td></tr>
+<tr><td>1ケースの総重量</td><td>12 kg</td></tr>
+<tr><td>コンテナの最大積載重量</td><td>20,000 kg</td></tr>
+<tr><td>仕入値（税抜）</td><td>JPY 2,400 /ケース</td></tr>
+<tr><td>為替（本日のレート）</td><td id="rt">未入力</td></tr>
+<tr><td>陸送費</td><td>JPY 45,000 /コンテナ</td></tr>
+<tr><td>通関費</td><td>JPY 15,000 /コンテナ</td></tr>
+<tr><td>THC（港の費用）</td><td>JPY 30,000 /コンテナ</td></tr>
+<tr id="frRow" style="display:none"><td>海上運賃（20フィート）</td><td>USD 1,000 /コンテナ</td></tr>
+</table>
+<div class="rate"><b>本日のレート　1 USD ＝ JPY</b><input id="fx" inputmode="decimal" placeholder="例 150"></div>
+<div class="rate"><b>利益（仕入値の）</b><input id="rate" inputmode="decimal" value="10"><b>%</b></div>
+<p class="sub" style="margin:6px 0 0">円は小数第1位まで（第2位を四捨五入）、ドルは小数第2位まで（第3位を四捨五入）。レートと利益率は、あとから変えて計算し直せます。</p></div>
+<div class="bar"><i id="pg"></i></div>
+<div id="note" class="sub" style="color:#1a5fb4"></div>
+<div id="steps"></div>
+<div class="fin" id="fin"></div>
+<div class="card" id="rev" style="display:none"><h2>おまけの道具：目標の単価から、利益率を逆算する（FOBの単価）</h2>
+<p class="sub" style="margin:0 0 8px">「この単価にしたい」から、利益率がいくらまで下げられるかを調べます。</p>
+<div class="row"><input id="tg" inputmode="text" autocomplete="off" placeholder="目標の単価　例 USD 16.60"><button id="rb">逆算する</button></div>
+<div class="msg" id="rm"></div><button class="g" id="ra" style="display:none;margin-top:8px">この利益率で計算し直す</button>
+<h2 style="margin-top:16px">レートが変わったら？（FOBの単価）</h2>
+<p class="sub" style="margin:0 0 6px">今の利益率のまま、レートが動いたときの単価の目安です。円安（数字が大きい）ほど、ドルでの単価は下がります。</p>
+<div style="overflow-x:auto"><table id="tb" style="width:100%;border-collapse:collapse;font-size:16px"></table></div></div>
+<div class="card" id="lk" style="display:none;color:#5b6773"><b>？？？</b>　最後まで計算できると、新しい道具が出てきます。</div>
+<details class="card" id="help" style="margin-top:12px"><summary style="cursor:pointer;font-weight:700">困ったとき（答えを見る）</summary>
+<p class="sub" style="margin:8px 0">わからなくなったら、答えを入れてもらえます。入った数字を見て、式を確認しましょう。</p>
+<button id="h1" style="margin:4px 0;width:100%">この問題の答えを入れる</button>
+<button id="h2" style="margin:4px 0;width:100%">ここから最後まで、答えを入れる</button>
+<button id="h3" style="margin:4px 0;width:100%;background:#fff;color:#c05a00;border:2px solid #c05a00">自分でやり直す（最初から。レートは残ります）</button>
+<div class="msg" id="hm"></div></details>
+
+</main>
+<script>
+const R=(x,n)=>Math.round((x+1e-9)*Math.pow(10,n))/Math.pow(10,n);
+const fmt=(v,u)=>u==="USD"?"USD "+v.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}):
+ u==="JPY"?"JPY "+(Number.isInteger(v)?v.toLocaleString("en-US"):v.toLocaleString("en-US",{minimumFractionDigits:1,maximumFractionDigits:1})):v.toLocaleString("en-US")+" "+u;
+const UN={ctn:["ctn","ctns","cases","case","ケース"],JPY:["jpy"],USD:["usd"]};
+let rate=10,fx=0,cur=0,S=[],ok=[],carried=[],note="",cfrOpen=false;
+const CFR_WORD="cfr"; /* 続きを開く合言葉（先生が授業で言う） */
+const FOBN=14;function N(){return cfrOpen?S.length:FOBN}
+const DEP=[[],[],[],[],["p"],["p"],["p","f"],[],[],[],["p"],["p","f"],[],["p","f"],[],["p","f"],["p","f"]];
+const LBL=["","","","","②","③","④","⑤","⑥","⑦","⑧","⑨","数量","合計","⑩","⑪","CFR合計"];
+function curIdx(){const a=ok.slice(0,N());const i=a.indexOf(false);return i<0?N():(ok.length?i:0)}
+function changed(k){
+ const hit=[],keep=[];
+ DEP.forEach((d,i)=>{if(ok[i]){if(d.includes(k)){ok[i]=false;carried[i]=false;hit.push(LBL[i])}else{carried[i]=true}}});
+ const keptNames=DEP.map((d,i)=>(!d.includes(k)&&ok[i]&&["⑤","⑥","⑦"].includes(LBL[i]))?LBL[i]:"").filter(x=>x);
+ note=hit.length?(k==="p"?"利益率":"レート")+"を変えたので、"+hit.join("・")+"を計算し直します。"+(keptNames.length?keptNames.join("")+"は変わらないので、前の答えをそのまま使います。":""):"";
+}
+function build(){
+ const v=R(33/0.01685,0)>0?Math.floor(33/0.01685):0, w=Math.floor(20000/12);
+ const q=Math.floor(Math.min(v,w)/100)*100;
+ const p=R(2400*rate/100,1), exw=R(2400+p,1), exu=R(exw/fx,2);
+ const t=R(45000/q,1), c=R(15000/q,1), h=R(30000/q,1);
+ const fy=R(exw+t+c+h,1), fu=R(fy/fx,2), tot=R(q*fu,2);
+ const fr=R(1000/q,2), cfr=R(fu+fr,2), ctot=R(q*cfr,2);
+ const wrongDiv=(cost,val)=>[1958,1900,1666,1600].filter(n=>n!==q).some(n=>Math.abs(R(cost/n,1)-val)<.06||Math.abs(cost/n-val)<.011);
+ S=[
+ {q:"コンテナに入る数（容積から）",how:"コンテナの容積 ÷ 1ケースの容積。小数点以下は切り捨て",a:v,u:"ctn",tol:0,hint:"33 ÷ 0.01685"},
+ {q:"コンテナに積める数（重量から）",how:"コンテナの最大積載重量 ÷ 1ケースの総重量。小数点以下は切り捨て",a:w,u:"ctn",tol:0,hint:"20,000 ÷ 12"},
+ {q:"実際に積める数",how:"容積と重量、少ない方に合わせる。100未満は切り捨て",a:q,u:"ctn",tol:0,hint:"少ない方は？ その数の100未満を切り捨て",chk:x=>x===v||x===w||x===Math.floor(v/100)*100?"重量と容積の、少ない方に合わせます。100未満の切り捨ても忘れずに":null},
+ {q:"①仕入値（1ケース）",how:"いちばん上の「使う数字の表」にある、仕入値（税抜）のとおり",a:2400,u:"JPY",tol:0,hint:"表の「仕入値（税抜）」の数字です。単位は JPY"},
+ {q:"②利益（1ケース）",how:`仕入値 × ${rate}%。小数第1位まで（第2位を四捨五入）`,a:p,u:"JPY",tol:.05,hint:`2,400 × ${rate/100}`},
+ {q:"③EXW価格（円）",how:"仕入値 ＋ 利益",a:exw,u:"JPY",tol:.05,hint:"2,400 ＋ ②"},
+ {q:"④EXW価格（ドル）",how:"③ ÷ 本日のレート。小数第2位まで（第3位を四捨五入）",a:exu,u:"USD",tol:.004,hint:"③ ÷ レート。切り捨てではなく四捨五入",chk:x=>Math.abs(x-Math.floor(exw/fx*100)/100)<.0001&&Math.abs(x-exu)>.004?"切り捨てではなく四捨五入です":null},
+ {q:"⑤陸送費（1ケースあたり）",how:"45,000 ÷ 積める数。小数第1位まで（第2位を四捨五入）",a:t,u:"JPY",tol:.05,hint:"割る数は、実際に積む数",chk:x=>wrongDiv(45000,x)?"割る数は、実際に積む数です（容積や重量の上限ではありません）":null},
+ {q:"⑥通関費（1ケースあたり）",how:"15,000 ÷ 積める数。小数第1位まで（第2位を四捨五入）",a:c,u:"JPY",tol:.05,hint:"割る数は⑤と同じ",chk:x=>wrongDiv(15000,x)?"割る数は、実際に積む数です":null},
+ {q:"⑦THC（1ケースあたり）",how:"30,000 ÷ 積める数。小数第1位まで（第2位を四捨五入）",a:h,u:"JPY",tol:.05,hint:"割る数は⑤と同じ",chk:x=>wrongDiv(30000,x)?"割る数は、実際に積む数です":null},
+ {q:"⑧FOB価格（円）",how:"③ ＋ ⑤ ＋ ⑥ ＋ ⑦。小数第1位まで（第2位を四捨五入）",a:fy,u:"JPY",tol:.05,hint:"EXW円 ＋ 陸送 ＋ 通関 ＋ THC"},
+ {q:"⑨FOB価格（ドル）",how:"⑧ ÷ 本日のレート。小数第2位まで（第3位を四捨五入）",a:fu,u:"USD",tol:.004,hint:"⑧ ÷ レート"},
+ {q:"数量（Offerに書く数）",how:"積める数をそのまま",a:q,u:"ctn",tol:0,hint:"3つ目の答えと同じ"},
+ {q:"合計金額（Offerに書く金額）",how:"数量 × FOB単価（ドル）",a:tot,u:"USD",tol:.5,hint:"数量 × ⑨"},
+ {q:"⑩海上運賃（1ケースあたり）",how:"海上運賃 USD 1,000（1本）÷ 積める数。小数第2位まで（第3位を四捨五入）",a:fr,u:"USD",tol:.004,hint:"1,000 ÷ 積める数",chk:x=>[1958,1900,1666,1600].filter(n=>n!==q).some(n=>Math.abs(R(1000/n,2)-x)<.006)?"割る数は、実際に積む数です":null},
+ {q:"⑪CFR価格（ドル）",how:"⑨ FOB価格 ＋ ⑩ 海上運賃",a:cfr,u:"USD",tol:.004,hint:"CFR ＝ FOB ＋ 海上運賃"},
+ {q:"CFRでの合計金額（Offerに書く金額）",how:"数量 × CFR単価（ドル）",a:ctot,u:"USD",tol:.5,hint:"数量 × ⑪"}
+ ];
+ S.res={q,fu,tot,t,c,h,fr,cfr,ctot};if(!ok.length){ok=S.map(()=>false);carried=S.map(()=>false)}
+}
+let revRate=null,unlocked=false,helped=false;
+function fxTable(){
+ const r=S.res,tb=document.getElementById("tb"),T=parse(document.getElementById("tg").value);
+ const hasT=T&&T.pre==="usd"&&!T.post&&T.n>0;
+ const p=R(2400*rate/100,1),exw=R(2400+p,1);
+ let h=`<tr style="background:#f4f6f8"><th style="text-align:left;padding:4px">レート</th><th style="text-align:right;padding:4px">FOB単価</th>${hasT?'<th style="text-align:right;padding:4px">目標に必要な利益率</th>':""}<th></th></tr>`;
+ [-10,-5,0,5,10].forEach(d=>{
+  const f=R(fx+d,2);if(f<=0)return;
+  const fu=R(R(exw+r.t+r.c+r.h,1)/f,2);
+  let rt="";if(hasT){const need=T.n*f-(r.t+r.c+r.h)-2400;rt=need>0?(Math.floor(need/2400*1000)/10).toFixed(1)+"%":"赤字"}
+  h+=`<tr style="${d===0?'font-weight:700;':''}border-top:1px solid #d9dee3"><td style="padding:6px 4px">${f}${d===0?"（今）":""}</td><td style="text-align:right;padding:6px 4px">USD ${fu.toFixed(2)}</td>${hasT?`<td style="text-align:right;padding:6px 4px">${rt}</td>`:""}<td style="text-align:right;padding:2px 0">${d===0?"":`<button class="g" data-f="${f}" style="font-size:14px;padding:4px 8px">このレートで</button>`}</td></tr>`;
+ });
+ tb.innerHTML=h;
+ tb.querySelectorAll("button").forEach(b=>b.onclick=()=>{const n=parseFloat(b.dataset.f);fx=n;document.getElementById("fx").value=n;document.getElementById("rt").textContent="1 USD = JPY "+n;build();changed("f");render();window.scrollTo({top:0,behavior:"smooth"})});
+}
+function revCalc(){
+ const m=document.getElementById("rm"),a=document.getElementById("ra");a.style.display="none";revRate=null;
+ const v=parse(document.getElementById("tg").value);
+ const bad=t=>{m.className="msg ng";m.textContent=t};
+ if(!v)return bad("数字を入れてください（例：USD 16.60）");
+ if(v.post&&!v.pre)return bad("通貨は数字の前に書きます（例：USD 16.60）");
+ if(v.pre!=="usd"||v.post)return bad("単価は USD で入力します（例：USD 16.60）");
+ const r=S.res,need=v.n*fx-(r.t+r.c+r.h)-2400,pr=need/2400*100;
+ if(need<=0){return bad("この単価だと、利益がなくなります（利益 JPY "+need.toFixed(1)+" /ケース）。仕入値と費用が回収できません")}
+ const rr=Math.floor(pr*10)/10,p=R(2400*rr/100,1);
+ m.className="msg";m.innerHTML="利益率は <b>"+rr.toFixed(1)+"%</b> まで。<br>利益は <b>JPY "+p.toLocaleString("en-US",{minimumFractionDigits:1})+"</b> /ケース、全体で <b>JPY "+Math.round(p*r.q).toLocaleString("en-US")+"</b>（今の利益率："+rate+"% → JPY "+Math.round(R(2400*rate/100,1)*r.q).toLocaleString("en-US")+"）";
+ revRate=rr;a.style.display="inline-block";fxTable();
+}
+function parse(t){
+ t=t.replace(/[０-９．，]/g,c=>({"．":".","，":","}[c]||String.fromCharCode(c.charCodeAt(0)-0xFEE0)));
+ const m=t.match(/-?\d[\d,]*\.?\d*|\.\d+/);if(!m)return null;
+ const cl=x=>x.replace(/\s/g,"").toLowerCase();
+ return{n:parseFloat(m[0].replace(/,/g,"")),pre:cl(t.slice(0,m.index)),post:cl(t.slice(m.index+m[0].length))};
+}
+const box=document.getElementById("steps");
+function render(){document.getElementById("frRow").style.display=cfrOpen?"":"none";
+ box.innerHTML="";cur=curIdx();
+ if(!(fx>0)){box.innerHTML='<div class="step"><div class="q">最初に、本日のレートを入れてください</div><p class="how">上の「本日のレート」欄に、1ドルが何円かを入力します（例：150）。</p></div>';document.getElementById("pg").style.width="0";document.getElementById("fin").style.display="none";return}
+ S.forEach((s,i)=>{
+  if(i>=N())return;
+  const d=document.createElement("div");const dn=ok[i];d.className="step"+(dn?" done":i>cur?" lock":"");
+  d.innerHTML=dn?`<div class="q">${s.q}${carried[i]&&[7,8,9].includes(i)?' <span style="color:#5b6773;font-size:14px;font-weight:400">（変わらないので引き継ぎ）</span>':""}</div><div class="msg ok">${fmt(s.a,s.u)}</div>`:
+  i==cur?`<div class="q">${s.q}</div><p class="how">${s.how}</p>
+  <p class="how" style="margin:2px 0 6px;font-weight:700;color:#1d4f9e">入力のしかた：${s.u==="JPY"||s.u==="USD"?s.u+" ＿＿（"+(s.u==="JPY"?"円":"ドル")+"。"+s.u+" が数字の前）":"＿＿ "+s.u+"（数量。"+s.u+" が数字の後ろ）"}</p>
+  <div class="row"><input id="in" inputmode="text" autocomplete="off" placeholder="${s.u==="JPY"||s.u==="USD"?s.u+" 100":"100 "+s.u}"><button id="go">答える</button></div>
+  <div class="msg" id="ms"></div><div class="hint" id="ht">${s.hint}</div><button class="g" id="hb" style="margin-top:8px">ヒント</button>`:
+  `<div class="q">${s.q}</div>`;
+  box.appendChild(d);
+ });
+ document.getElementById("note").textContent=note;if(!helped&&ok.length&&ok.slice(0,FOBN).every(x=>x))unlocked=true;document.getElementById("rev").style.display=(unlocked&&fx>0)?"block":"none";document.getElementById("lk").style.display=(!unlocked&&fx>0)?"block":"none";if(unlocked)fxTable();document.getElementById("pg").style.width=(ok.slice(0,N()).filter(x=>x).length/N()*100)+"%";
+ document.getElementById("fin").style.display="none";
+ if(cur<N()){
+  document.getElementById("go").onclick=check;
+  document.getElementById("in").onkeydown=e=>{if(e.key==="Enter")check()};
+  document.getElementById("hb").onclick=()=>document.getElementById("ht").style.display="block";
+ } else finish();
+}
+function check(){
+ const s=S[cur],ms=document.getElementById("ms"),v=parse(document.getElementById("in").value);
+ const bad=t=>{ms.className="msg ng";ms.textContent=t};
+ if(!v)return bad("数字を入れてください");
+ const cur$=s.u==="JPY"||s.u==="USD";
+ if(!v.pre&&!v.post)return bad("単位がありません。"+(cur$?"数字の前に "+s.u+" を付けてください（例："+s.u+" 100）":"数字のあとに "+s.u+" を付けてください（例：100 "+s.u+"）"));
+ if(cur$){
+  if(v.post&&!v.pre)return bad("通貨は数字の前に書きます（例："+s.u+" 100）");
+  if(v.pre==="$"||v.pre==="￥"||v.pre==="¥")return bad(v.pre==="$"?"ドルは USD と書きます":"円は JPY と書きます");
+  if(!UN[s.u].includes(v.pre)||v.post)return bad("単位が違います。ここは "+s.u+" です");
+ }else{
+  if(v.pre&&!v.post)return bad("数量の単位は数字のあとに書きます（例：100 "+s.u+"）");
+  if(!UN[s.u].includes(v.post)||v.pre)return bad("単位が違います。ここは "+s.u+" です");
+ }
+ if(Math.abs(v.n-s.a)<=s.tol+1e-9){ok[cur]=true;note=note;render();return}
+ bad((s.chk&&s.chk(v.n))||"もう一度。式を確認してみましょう");
+}
+function openCfr(){cfrOpen=true;note="先方の希望に合わせて、続きを計算します。";render();window.scrollTo({top:document.getElementById("steps").offsetTop,behavior:"smooth"})}
+function finish(){
+ const r=S.res,f=document.getElementById("fin");f.style.display="block";
+ if(!cfrOpen){
+  const txt=`Quantity: ${r.q.toLocaleString("en-US")} ctn\nUnit Price (FOB): USD ${r.fu.toFixed(2)} per case\nTOTAL: USD ${r.tot.toLocaleString("en-US",{minimumFractionDigits:2})}`;
+  f.innerHTML=`<div class="q">FOBの Offer ができました</div><pre>${txt}</pre><button id="cp">コピー</button><div class="msg" id="cm"></div><hr style="border:0;border-top:1px solid #d9dee3;margin:14px 0"><div class="q">先方（Teams）から連絡が届いたら、先生が合言葉を言います</div><div class="row" style="margin-top:6px"><input id="wd" inputmode="text" autocomplete="off" placeholder="合言葉（半角英字）"><button id="nx">続きを開く</button></div><div class="msg" id="wm"></div>`;
+  document.getElementById("nx").onclick=()=>{const w=document.getElementById("wd").value.replace(/[Ａ-Ｚａ-ｚ]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).trim().toLowerCase();if(w!==CFR_WORD){const m=document.getElementById("wm");m.className="msg ng";m.textContent="合言葉が違います。先生が言う言葉を、半角英字で入れてください";return}openCfr()};
+ }else{
+  const txt=`Quantity: ${r.q.toLocaleString("en-US")} ctn\nUnit Price (CFR Shanghai): USD ${r.cfr.toFixed(2)} per case\nTOTAL: USD ${r.ctot.toLocaleString("en-US",{minimumFractionDigits:2})}`;
+  f.innerHTML=`<div class="q">CFRの計算ができました。ここまで来たら、計算は合格です</div><p class="sub" style="margin:0 0 6px">先生が出す「標準のOffer」はレート158で計算しています。自分のレートが違えば、数字が違って正解です。</p><pre>${txt}</pre><button id="cp">コピー</button><div class="msg" id="cm"></div>`;
+ }
+ document.getElementById("cp").onclick=()=>{const t=document.querySelector("#fin pre").textContent;try{navigator.clipboard.writeText(t).then(()=>cm.textContent="コピーしました")}catch(e){cm.textContent="長押しで選択してコピーしてください"}};
+}
+const num=v=>parseFloat(String(v).replace(/[０-９．]/g,c=>c==="．"?".":String.fromCharCode(c.charCodeAt(0)-0xFEE0)));
+document.getElementById("fx").addEventListener("change",e=>{
+ const n=num(e.target.value);
+ if(!(n>0&&n<1000)){e.target.value=fx||"";return}
+ fx=n;document.getElementById("rt").textContent="1 USD = JPY "+n;build();if(ok.length)changed("f");render();
+});
+document.getElementById("rate").addEventListener("change",e=>{
+ const n=parseFloat(String(e.target.value).replace(/[０-９．]/g,c=>c==="．"?".":String.fromCharCode(c.charCodeAt(0)-0xFEE0)));
+ if(!(n>=0&&n<=100)){e.target.value=rate;return}
+ rate=n;build();if(ok.length)changed("p");render();
+});
+document.getElementById("rb").onclick=revCalc;
+document.getElementById("tg").onkeydown=e=>{if(e.key==="Enter")revCalc()};
+document.getElementById("tg").addEventListener("input",()=>{if(unlocked)fxTable()});
+document.getElementById("ra").onclick=()=>{if(revRate==null)return;document.getElementById("rate").value=revRate;rate=revRate;build();if(ok.length)changed("p");render();window.scrollTo({top:document.getElementById("rate").getBoundingClientRect().top+scrollY-40,behavior:"smooth"})};
+build();render();
+/* 答えの自動入力（「困ったとき」と、先生用バーで共通） */
+function autoFill(toCfr,one){
+ if(!(fx>0)){const e=document.getElementById("fx");e.value="158";e.dispatchEvent(new Event("change"))}
+ let g=0;
+ while(g++<40){
+  if(toCfr&&!cfrOpen&&cur>=FOBN){openCfr();continue}
+  if(cur>=N()||!S[cur])break;
+  const st=S[cur],cu=st.u==="JPY"||st.u==="USD";
+  const a=st.u==="JPY"?st.a.toFixed(1):st.u==="USD"?st.a.toFixed(2):String(st.a);
+  const inp=document.getElementById("in");if(!inp)break;
+  inp.value=cu?st.u+" "+a:a+" "+st.u;check();
+  if(one)break;
+ }
+}
+document.getElementById("h1").onclick=()=>{helped=true;
+ const noRate=!(fx>0);autoFill(false,true);
+ document.getElementById("hm").textContent=noRate?"レートは158で進めました。答えを見て、式を確認してください。":"答えを入れました。式を確認してください。";
+};
+document.getElementById("h3").onclick=()=>{
+ ok=[];carried=[];note="";cfrOpen=false;helped=false;unlocked=false;
+ document.getElementById("fin").style.display="none";
+ document.getElementById("hm").textContent="最初に戻りました。自分で計算してみましょう。";
+ build();render();window.scrollTo({top:document.getElementById("steps").offsetTop,behavior:"smooth"});
+};
+document.getElementById("h2").onclick=()=>{helped=true;
+ const noRate=!(fx>0);autoFill(cfrOpen||document.getElementById("nx")!==null&&false,false);
+ document.getElementById("hm").textContent=(noRate?"レートは158で進めました。":"")+"最後まで入りました。入った数字と式を見比べてください。";
+ window.scrollTo({top:document.getElementById("steps").offsetTop,behavior:"smooth"});
+};
+/* 先生用：URLの末尾に #teacher を付けると、先生用バーが出る */
+if(location.hash==="#teacher"){
+ const bar=document.createElement("div");bar.style.cssText="position:sticky;top:0;z-index:9;background:#fff3cd;border:1px solid #e0c36a;padding:8px;margin:0 0 8px;font-size:14px";
+ bar.innerHTML='<b>先生用</b>　<button id="tA">FOBまで自動入力</button> <button id="tB">CFRまで自動入力</button> <button id="tC">最初から</button>';
+ document.body.insertBefore(bar,document.body.firstChild);
+ document.getElementById("tA").onclick=()=>{autoFill(false,false);window.scrollTo({top:document.getElementById("steps").offsetTop,behavior:"smooth"})};
+ document.getElementById("tB").onclick=()=>{autoFill(true,false);window.scrollTo({top:document.getElementById("steps").offsetTop,behavior:"smooth"})};
+ document.getElementById("tC").onclick=()=>location.reload();
+}
+</script></body></html>
