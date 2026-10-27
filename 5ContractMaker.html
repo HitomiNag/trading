@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Contract Maker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600&family=Source+Serif+4:wght@400;600&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/* Layout: form on the left, A4 letter preview on the right. Phone width: two tabs (入力 / プレビュー).
+   Palette: blue-grey neutrals, mikan orange accent. The letter keeps its own paper colors in both themes. */
+:root{
+  --bg:#eef1f4;
+  --surface:#ffffff;
+  --surface-2:#f4f6f8;
+  --desk:#d6dce3;
+  --fg:#1b2430;
+  --muted:#586573;
+  --line:#d3d9e0;
+  --accent:#bf5509;
+  --accent-fg:#ffffff;
+  --accent-soft:#fbeadd;
+  --ui:'Zen Kaku Gothic New',system-ui,-apple-system,'Hiragino Sans','Yu Gothic',sans-serif;
+  --doc:'Source Serif 4','Zen Kaku Gothic New',Georgia,serif;
+  --doc-sans:'Source Sans 3','Zen Kaku Gothic New',system-ui,sans-serif;
+  --paper:#ffffff;
+  --ink:#18202b;
+  --ink-muted:#566170;
+  --rule:#c8ced6;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#12161b;--surface:#1b2128;--surface-2:#222a33;--desk:#0b0e12;
+    --fg:#e6eaee;--muted:#9aa6b3;--line:#2f3943;
+    --accent:#f08a3c;--accent-fg:#1a1006;--accent-soft:#33241a;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12161b;--surface:#1b2128;--surface-2:#222a33;--desk:#0b0e12;
+  --fg:#e6eaee;--muted:#9aa6b3;--line:#2f3943;
+  --accent:#f08a3c;--accent-fg:#1a1006;--accent-soft:#33241a;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--ui);font-size:15px;line-height:1.6;padding-inline:16px;padding-block:16px 40px}
+.app{max-width:1280px;margin:0 auto}
+.top{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 16px;margin-block-end:16px}
+h1{font-size:20px;line-height:1.3;margin:0;font-weight:700}
+.sub{margin:0;color:var(--muted);font-size:13px}
+.tabs{display:none}
+.layout{display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr);gap:24px;align-items:start}
+.pane-form,.pane-preview{min-width:0}
+
+fieldset{border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:6px 16px 16px;margin:0 0 16px;min-width:0}
+legend{font-weight:700;font-size:14px;padding-inline:6px}
+.stack{display:grid;gap:12px;margin-top:8px}
+.row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+label{display:grid;gap:4px;font-size:13px;color:var(--muted);min-width:0}
+label i{font-style:normal;font-size:12px;opacity:.85}
+input,select,textarea{width:100%;min-width:0;font:inherit;font-size:16px;color:var(--fg);background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:9px 10px}
+textarea{resize:vertical}
+input:focus-visible,select:focus-visible,textarea:focus-visible,.btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.hint{font-size:13px;line-height:1.6;border-radius:6px;background:var(--accent-soft);padding:10px 12px;color:var(--fg)}
+.hint b{display:block;font-size:12px;color:var(--muted);margin-top:4px}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px 12px;margin:0;padding:12px;border-radius:6px;background:var(--surface-2)}
+.readout dt{font-size:12px;color:var(--muted)}
+.readout dd{margin:0;font-weight:700;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+
+.btn{font:inherit;font-weight:700;font-size:14px;border-radius:6px;padding:10px 14px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer}
+.btn:hover:not(:disabled){border-color:var(--muted)}
+.btn:disabled{opacity:.55;cursor:default}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.banner{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between;padding:10px 12px;margin-bottom:16px;border-radius:8px;background:var(--accent-soft);font-size:13px}
+.banner[hidden]{display:none}
+.banner .btn{padding:6px 10px;font-size:13px}
+.narrow-only{display:none}
+
+.actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.chip{font-size:12px;font-weight:700;padding:4px 10px;border-radius:99px;background:var(--surface);border:1px solid var(--line);color:var(--muted)}
+.chip.ok{color:var(--fg)}
+.status{min-height:1.6em;margin:0 0 8px;font-size:13px;color:var(--muted)}
+.copybox{margin-bottom:10px}
+.copybox textarea{min-height:140px;font-size:13px}
+.desk{background:var(--desk);border-radius:8px;padding:16px}
+.sheet-wrap{width:100%;max-width:794px;margin-inline:auto;overflow:hidden}
+
+/* The contract form (A4) */
+.sheet{width:794px;min-height:1123px;padding:48px 52px 44px;background:var(--paper);color:var(--ink);font:400 13px/1.5 var(--doc);transform-origin:0 0;box-shadow:0 1px 3px rgba(0,0,0,.2),0 8px 28px rgba(0,0,0,.18);display:flex;flex-direction:column;gap:10px}
+.sheet *{box-sizing:border-box}
+.c-title{font:600 22px/1.2 var(--doc-sans);letter-spacing:.12em;text-align:center;margin:0 0 4px}
+.c-pre{font-size:12px;line-height:1.55;margin:0}
+.c-pre b{font-weight:600}
+.c-tab{width:100%;border-collapse:collapse;table-layout:fixed;font-size:12.5px}
+.c-tab td,.c-tab th{border:1px solid var(--ink);padding:4px 7px;vertical-align:top;text-align:left;overflow-wrap:anywhere}
+.c-tab th{font:600 10px/1.35 var(--doc-sans);letter-spacing:.08em;text-transform:uppercase;background:transparent}
+.c-tab .n{font:400 10px var(--doc-sans);color:var(--ink-muted);margin-left:4px;letter-spacing:0}
+.c-tab td{min-height:30px}
+.c-tab .r{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.c-tab .h{height:34px}
+.c-tab .t{height:62px}
+.blank{display:inline-block;min-width:7em;height:1.15em;border-bottom:1px solid var(--ink-muted);vertical-align:baseline}
+.jp{display:block;font:400 10px/1.35 var(--ui);color:var(--ink-muted);text-transform:none;letter-spacing:0}
+.c-sign td{height:70px;vertical-align:bottom}
+.c-sign .nm{display:block;margin-top:4px}
+label.check{display:flex;flex-direction:row;align-items:center;gap:6px;color:var(--fg);font-size:13px;cursor:pointer}
+label.check input{width:auto}
+.fixed{font-size:11px;color:var(--accent);font-weight:700}
+@media (max-width:899px){
+  .layout{grid-template-columns:minmax(0,1fr)}
+  .tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:8px;margin-bottom:8px}
+  .tab[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+  .app[data-view="form"] .pane-preview{display:none}
+  .app[data-view="preview"] .pane-form{display:none}
+  .narrow-only{display:block}
+  .desk{padding:8px}
+}
+@media (min-width:900px){
+  .pane-preview{position:sticky;top:16px;max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);overflow:auto}
+}
+
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font:14px/1.5 var(--ui)}
+#printHost{display:none}
+@media print{
+  html,body{background:#fff!important}
+  body>*{display:none!important}
+  body>#printHost{display:block!important}
+  #printHost .sheet{width:100%;min-height:0;padding:0;box-shadow:none;transform:none;gap:8px;font-size:12px;line-height:1.45}
+  #printHost .c-tab .h{height:24px}#printHost .c-tab .t{height:40px}#printHost .c-sign td{height:42px}#printHost .c-tab td,#printHost .c-tab th{padding:2px 6px}#printHost .c-title{font-size:19px}#printHost .sheet{zoom:.92}
+  @page{size:A4;margin:9mm 13mm}
+}
+
+.hl .u{background:#fff1a8;outline:1px solid #e6c200}.hl .a{background:#eceff1}
+.hl .flash{animation:fl 1.4s ease-out 1}@keyframes fl{0%,40%{background:#ffb300;outline:3px solid #e65100}100%{}}
+.legend{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 8px}.lg{padding:4px 10px;border-radius:6px;font-size:15px;font-weight:700}.lg.u{background:#fff1a8;outline:1px solid #e6c200;color:#111}.lg.a{background:#eceff1;color:#111}
+.tag5{display:inline-block;margin-left:6px;padding:0 6px;border-radius:4px;background:#fff1a8;color:#111;font-size:13px;font-weight:700;font-style:normal}
+details.fx table td{padding:3px 4px;vertical-align:top;border-top:1px solid #d9dee3}details.fx td:first-child{white-space:nowrap;font-weight:700}
+</style>
+</head><body>
+<div class="app" id="app" data-view="form">
+  <header class="top">
+    <h1>Contract Maker</h1>
+    <p class="sub">承諾されたOfferの内容で、売買契約書（Confirmation of Sale）を作ります。</p>
+  </header>
+  <div class="tabs" role="group" aria-label="表示の切り替え">
+    <button type="button" class="btn tab" id="tabForm" aria-pressed="true">入力</button>
+    <button type="button" class="btn tab" id="tabPrev" aria-pressed="false">プレビュー</button>
+  </div>
+  <div class="layout">
+    <section class="pane-form" aria-label="入力フォーム">
+<fieldset><legend>Offerを貼る（数量・単価が入ります）</legend><div class="stack">
+<textarea id="offerPaste" rows="4" placeholder="Teams や原価計算フォームでコピーした Offer を、ここに貼る" style="width:100%;font-size:16px;padding:8px;border:1px solid #bbb;border-radius:8px"></textarea>
+<button type="button" class="btn primary" id="offerRead" style="width:100%">読み取る</button>
+<p class="status" id="offerMsg" role="status" style="margin:0"></p>
+<p style="margin:0;font-size:13px;color:#5b6773">貼らずに、下の数量・単価を手で入れてもかまいません。</p></div></fieldset>
+<fieldset><legend>① あなたの会社</legend><div class="stack">
+<label for="sellerName"><span>会社名（自分で決める・英語）<i class="tag5">契約書の①</i></span><input id="sellerName" data-k="sellerName" type="text" autocomplete="off" placeholder="例：○○ TRADING CO., LTD."></label>
+<label for="sellerSign"><span>署名する人（あなたの名前・英語）<i class="tag5">契約書の(18)</i></span><input id="sellerSign" data-k="sellerSign" type="text" autocomplete="off" placeholder="例：Taro Yamada, Export Manager"></label>
+</div></fieldset>
+<fieldset><legend>② 数量と単価（Offerのとおり）</legend><div class="stack">
+<div class="row">
+<label for="qty"><span>数量（cartons）<i class="tag5">(5)</i></span><input id="qty" data-k="qty" type="text" inputmode="decimal" autocomplete="off" placeholder="数字だけ"></label>
+<label for="price"><span>単価（USD）<i class="tag5">(6)</i></span><input id="price" data-k="price" type="text" inputmode="decimal" autocomplete="off" placeholder="数字だけ"></label>
+</div>
+<dl class="readout"><div><dt>合計金額（自動で計算）<i class="tag5">(7)</i></dt><dd id="roTotal">—</dd></div></dl>
+</div></fieldset>
+<fieldset><legend>③ いつまでに船に積む？</legend><div class="stack">
+<label for="shipDate"><span>船積の期限<i class="tag5">契約書の(11)</i></span><input id="shipDate" data-k="shipDate" type="date"></label>
+<p style="margin:0;color:#5b6773;font-size:15px">入金確認 → 出荷準備 → 国内輸送 → 通関 → 船の予約。余裕を見て決めます。</p>
+</div></fieldset>
+<fieldset><legend>④ 検査は誰がする？</legend><div class="stack">
+<label for="inspection"><span>検査<i class="tag5">契約書の(12)</i></span><select id="inspection" data-k="inspection"><option value="">選択してください</option><option>Seller's inspection</option><option>Buyer's inspection upon arrival</option><option>Third-party inspection</option></select></label>
+</div></fieldset>
+<details class="fx" style="margin:10px 0 16px;background:#f4f6f8;border-radius:10px;padding:10px 14px"><summary style="cursor:pointer;font-weight:700">Offerと同じ条件（自動で入っています）<br><small style="font-weight:400;color:#5b6773">押すと、何が入っているか、意味がわかります</small></summary><table style="width:100%;font-size:15px;margin-top:8px;border-collapse:collapse"><tr><td>(1)</td><td>買い手<br><b>SH TRADING CO., LTD.</b><br>取引の相手</td></tr><tr><td>(4)</td><td>品名・品質<br><b>Canned Mandarin Oranges / As per seller's sample</b><br>品質は「見本どおり」。第4回で見本を渡したから</td></tr><tr><td>(8)</td><td>貿易条件<br><b>CFR Shanghai, China</b><br>売り手が上海までの海上運賃を払う。危険は本船に積んだ時点で買い手に移る。仕向港名まで書く</td></tr><tr><td>(9)(10)</td><td>積出港・仕向港<br><b>Shimizu, Japan → Shanghai, China</b></td></tr><tr><td>(13)</td><td>梱包<br><b>24 cans (425 g each) per export carton</b><br>1ケースに24缶</td></tr><tr><td>(14)</td><td>保険<br><b>To be covered by the Buyer</b><br>CFRでは、保険は買い手が手配（売り手が付けるのはCIF）</td></tr><tr><td>(15)</td><td>決済<br><b>T/T in advance (100% before shipment)</b><br>代金を先に受け取る。売り手に有利</td></tr><tr><td>(16)</td><td>特約<br><b>None</b><br>特別な約束はなし</td></tr><tr><td>(2)(19)</td><td>契約日・署名日<br>今日の日付（自動）</td></tr><tr><td>(17)</td><td>買い手の署名<br><b>Li Wei, Purchasing Manager</b></td></tr></table></details>
+<div class="narrow-only"><button type="button" class="btn primary" id="toPreview" style="width:100%">プレビューを見る</button></div>
+<details id="helpBox" style="margin:12px 0 4px;background:#f4f6f8;border-radius:10px;padding:10px 14px"><summary style="cursor:pointer;font-weight:700">困ったとき（見本を入れる）</summary>
+<p style="margin:8px 0;font-size:14px;color:#5b6773">わからなくなったら、見本を入れてもらえます。入った内容を見て、自分の名前や会社名に直してください。</p>
+<button type="button" class="btn" id="hOffer" style="width:100%;margin:4px 0">標準Offerの数量・単価を入れる</button>
+<button type="button" class="btn" id="hAll" style="width:100%;margin:4px 0">見本を全部入れる</button>
+<button type="button" class="btn" id="hClear" style="width:100%;margin:4px 0;border:2px solid #c05a00;color:#c05a00;background:#fff">全部消して、自分でやり直す</button>
+<p class="status" id="helpMsg" role="status" style="margin:6px 0 0"></p></details>
+
+</section>
+
+    <section class="pane-preview" aria-label="プレビュー">
+      <div class="actions">
+        <button type="button" class="btn primary" id="btnPdf">①PDFで保存（印刷）</button>
+<button type="button" class="btn primary" id="btnSend" style="display:none">②先生に送る（PDFを添付）</button>
+<button type="button" class="btn" id="btnCopy">テキストをコピー（自分用）</button>
+        <button type="button" class="btn" id="btnBlank">手書き用の白紙をPDFで保存（印刷）</button>
+        <span class="chip" id="chip">—</span>
+        <label class="check" for="gloss"><input id="gloss" type="checkbox"> 日本語の注釈を付ける</label>
+      </div>
+      <div class="legend"><span class="lg u">黄色＝あなたが決めた所</span><span class="lg a">灰色＝Offerのとおり（自動）</span></div>
+<textarea id="txtBox" readonly style="display:none;width:100%;height:220px;font-size:14px;margin:6px 0;padding:8px;border:1px solid #bbb;border-radius:8px"></textarea>
+<div id="selfChk" style="margin:6px 0;padding:8px 12px;background:#f4f6f8;border-radius:10px;font-size:14px;line-height:1.7"></div>
+<p class="status" id="status" role="status"></p>
+      <div class="desk"><div class="sheet-wrap" id="wrap"><div class="sheet" id="sheet"></div></div></div>
+    </section>
+  </div>
+</div>
+<div id="printHost"></div>
+<script>
+(function(){
+'use strict';
+/* 設定部：Microsoft Forms の事前入力URL。空なら「先生に送る」は出ません。f.xxx=各設問のパラメータ名(rで始まるID) */
+var SUBMIT={url:'',f:{name:'',no:'',qty:'',price:'',total:'',terms:'',pay:'',ins:'',chk:'',std:''}};
+var STD={qty:1600,price:17.70};
+var KEY='contract-maker-student-simple-v1';
+function pad(n){return String(n).padStart(2,'0');}
+function today(){var d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+var CLASS={
+  sellerName:'',sellerAddr:'',
+  buyerName:'SH TRADING CO., LTD.',buyerAddr:'100 Example Road, Shanghai, China',
+  date:today(),contractNo:'SC-'+today().replace(/-/g,'')+'-01',marking:'',
+  commodity:'Canned Mandarin Oranges',quality:"As per seller's sample",
+  qty:'',unit:'cartons',cur:'USD',price:'',
+  terms:'CFR Shanghai, China',pol:'Shimizu, Japan',pod:'Shanghai, China',
+  shipment:'',shipDate:'',inspection:'',packing:'24 cans (425 g each) per export carton',
+  insurance:'To be covered by the Buyer',payment:'T/T in advance (100% before shipment)',special:'None',
+  buyerSign:'Li Wei, Purchasing Manager',sellerSign:'',signDate:today(),gloss:'1'
+};
+var S=null;
+try{var sv=localStorage.getItem(KEY);if(sv)S=Object.assign({},CLASS,JSON.parse(sv));}catch(_){}
+if(!S)S=Object.assign({},CLASS);
+function $(i){return document.getElementById(i);}
+var app=$('app'),sheet=$('sheet'),wrap=$('wrap'),statusEl=$('status');
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function num(x){var n=parseFloat(String(x==null?'':x).replace(/,/g,''));return isFinite(n)?n:NaN;}
+function fmt(x,a,b){return x.toLocaleString('en-US',{minimumFractionDigits:a,maximumFractionDigits:b});}
+var MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+function dateFmt(s){if(!s)return '';var p=s.split('-').map(Number);if(p.length!==3||!p[0])return '';return p[2]+' '+MONTHS[p[1]-1]+' '+p[0];}
+function money(x,cur){var d=cur==='JPY'?0:2;return fmt(x,d,d);}
+
+var REQUIRED=['sellerName','qty','price','shipment','inspection','sellerSign'];
+
+var GL={
+  sell:'売り手',buy:'買い手',date:'契約日',sno:'売り手の契約番号',bref:'買い手の参照番号',
+  mark:'荷印',com:'品名・品質',qty:'数量',up:'単価',amt:'金額',
+  terms:'貿易条件',pol:'積出港',pod:'仕向港',ship:'船積時期',insp:'検査',pack:'梱包',ins:'保険',pay:'決済条件',sp:'特約',
+  bsign:'買い手の署名',ssign:'売り手の署名',on:'署名日'
+};
+function build(d,blank){
+  var gl=!!d.gloss;
+  function g(k){return gl?'<span class="jp">'+GL[k]+'</span>':'';}
+  function v(x,w){x=(x==null?'':String(x)).trim();return (blank||!x)?'<span class="blank" style="min-width:'+(w||7)+'em"></span>':esc(x);}
+  function nv(n){return '<span class="n">('+n+')</span>';}
+  var q=blank?NaN:num(d.qty),p=blank?NaN:num(d.price);
+  var qtxt=isNaN(q)?'<span class="blank" style="min-width:4em"></span>':'<b>'+fmt(q,0,3)+'</b> '+esc(d.unit||'');
+  var ptxt=isNaN(p)?'<span class="blank" style="min-width:4em"></span>':esc(d.cur)+' <b>'+money(p,d.cur)+'</b><br><small>per '+esc((d.unit||'unit').replace(/s$/,''))+'</small>';
+  var atxt=(isNaN(q)||isNaN(p))?'<span class="blank" style="min-width:5em"></span>':esc(d.cur)+' <b>'+money(q*p,d.cur)+'</b>';
+  var sell=blank?'<span class="blank" style="min-width:16em"></span>':(String(d.sellerName||'').trim()?'<b>'+esc(d.sellerName)+'</b>'+(d.sellerAddr?', '+esc(d.sellerAddr):''):'<span class="blank" style="min-width:16em"></span>');
+  var buy=blank?'<span class="blank" style="min-width:16em"></span><br><span class="blank" style="min-width:16em"></span>':(v(d.buyerName,16)+(d.buyerAddr?'<br>'+esc(d.buyerAddr):''));
+  var com=blank?v('',14):(v(d.commodity,14)+(String(d.commodity||'').trim()&&d.quality?'<br><small>'+esc(d.quality)+'</small>':''));
+  var sg=function(x){return blank||!String(x||'').trim()?'<span class="blank" style="min-width:12em"></span>':'<span class="nm">'+esc(x)+'</span>';};
+  return ''+
+  '<h2 class="c-title">CONFIRMATION OF SALE</h2>'+
+  '<p class="c-pre"><b>① </b><span class="u" data-f="sellerName">'+sell+'</span>'+g('sell')+' as seller hereby confirms the sale to undermentioned Buyer of the following goods (the “Goods”) on the terms and conditions given below INCLUDING ALL THOSE PRINTED ON THE REVERSE SIDE HEREOF, which are expressly agreed to, understood and made a part of this contract:</p>'+
+  '<table class="c-tab"><colgroup><col style="width:30%"><col style="width:20%"><col style="width:17%"><col style="width:17%"><col style="width:16%"></colgroup>'+
+  '<tr><th colspan="3">BUYER’S NAME AND ADDRESS'+nv(1)+g('buy')+'</th><th colspan="2">SELLER’S DEPT.</th></tr>'+
+  '<tr><td colspan="3" class="h a">'+buy+'</td><td colspan="2" class="h"></td></tr>'+
+  '<tr><th colspan="3"></th><th>SELLER’S CONTRACT NO.'+g('sno')+'</th><th>DATE'+nv(2)+g('date')+'</th></tr>'+
+  '<tr><td colspan="3" class="h"></td><td class="h a">'+v(d.contractNo,5)+'</td><td class="h a">'+(blank||!d.date?'<span class="blank" style="min-width:5em"></span>':esc(dateFmt(d.date)))+'</td></tr>'+
+  '<tr><th>MARKING'+nv(3)+g('mark')+'</th><th>COMMODITY &amp; QUALITY'+nv(4)+g('com')+'</th><th class="r" style="text-align:right">QUANTITY'+nv(5)+g('qty')+'</th><th class="r" style="text-align:right">UNIT PRICE'+nv(6)+g('up')+'</th><th class="r" style="text-align:right">AMOUNT'+nv(7)+g('amt')+'</th></tr>'+
+  '<tr><td class="t">'+(blank?'':esc(d.marking||''))+'</td><td class="t a">'+com+'</td><td class="t r u" data-f="qty">'+qtxt+'</td><td class="t r u" data-f="price">'+ptxt+'</td><td class="t r u" data-f="qty price">'+atxt+'</td></tr>'+
+  '<tr><th colspan="3">TERMS OF DELIVERY'+nv(8)+g('terms')+'</th><th colspan="2">TIME OF SHIPMENT'+nv(11)+g('ship')+'</th></tr>'+
+  '<tr><td colspan="3" class="h a">'+v(d.terms,12)+'</td><td colspan="2" class="h u" data-f="shipDate">'+v(d.shipment,9)+'</td></tr>'+
+  '<tr><th colspan="5">PORT OF SHIPMENT'+nv(9)+g('pol')+'</th></tr>'+
+  '<tr><td colspan="5" class="h a">'+v(d.pol,12)+'</td></tr>'+
+  '<tr><th colspan="5">PORT OF DESTINATION'+nv(10)+g('pod')+'</th></tr>'+
+  '<tr><td colspan="5" class="h a">'+v(d.pod,12)+'</td></tr>'+
+  '<tr><th colspan="3">INSPECTION'+nv(12)+g('insp')+'</th><th colspan="2">PACKING'+nv(13)+g('pack')+'</th></tr>'+
+  '<tr><td colspan="3" class="h u" data-f="inspection">'+v(d.inspection,12)+'</td><td colspan="2" class="h a">'+v(d.packing,9)+'</td></tr>'+
+  '<tr><th colspan="3">INSURANCE'+nv(14)+g('ins')+'</th><th colspan="2">SPECIAL TERMS &amp; CONDITIONS'+nv(16)+g('sp')+'</th></tr>'+
+  '<tr><td colspan="3" class="h a">'+v(d.insurance,12)+'</td><td colspan="2" class="h a">'+v(d.special,9)+'</td></tr>'+
+  '<tr><th colspan="5">PAYMENT'+nv(15)+g('pay')+'</th></tr>'+
+  '<tr><td colspan="5" class="h a">'+v(d.payment,16)+'</td></tr>'+
+  '</table>'+
+  '<p class="c-pre" style="margin-top:6px">Accepted and confirmed by</p>'+
+  '<table class="c-tab c-sign"><colgroup><col style="width:50%"><col style="width:50%"></colgroup>'+
+  '<tr><th>(BUYER)'+nv(17)+g('bsign')+'</th><th>(SELLER)'+nv(18)+g('ssign')+'</th></tr>'+
+  '<tr><td class="a">'+sg(d.buyerSign)+'</td><td class="u" data-f="sellerSign">'+sg(d.sellerSign)+'</td></tr></table>'+
+  '<p class="c-pre a">ON '+(blank||!d.signDate?'<span class="blank" style="min-width:9em"></span>':'<b>'+esc(dateFmt(d.signDate))+'</b>')+nv(19)+g('on')+'</p>';
+}
+function render(){
+  sheet.innerHTML=build(S,false);sheet.classList.add('hl');
+  var q=num(S.qty),p=num(S.price);
+  $('roTotal').textContent=(isNaN(q)||isNaN(p))?'—':S.cur+' '+money(q*p,S.cur);
+  var miss=REQUIRED.filter(function(k){return !String(S[k]==null?'':S[k]).trim();}).length;
+  var chip=$('chip');chip.textContent=miss?'未入力 '+miss+'項目':'必須項目 入力済み';chip.className='chip'+(miss?'':' ok');
+  var ck=[],nm=String(S.sellerName||'').trim(),sg=String(S.sellerSign||'').trim(),qn=num(S.qty),pn=num(S.price);
+  ck.push([!!nm&&!!sg,'会社名と署名が入っている']);
+  ck.push([!isNaN(qn)&&!isNaN(pn),'数量と単価が入っている']);
+  ck.push([!isNaN(qn)&&!isNaN(pn)&&qn===STD.qty&&Math.abs(pn-STD.price)<0.005,'数量と単価が、標準Offerと同じ（1,600 ctn／USD 17.70）']);
+  ck.push([!!String(S.shipment||'').trim(),'船積みの期限が入っている']);
+  ck.push([!!String(S.inspection||'').trim(),'検査を選んでいる']);
+  $('selfChk').innerHTML='<b>提出前チェック</b>（×があっても、PDFは保存できます）<br>'+ck.map(function(c){return (c[0]?'✓ ':'× ')+c[1];}).join('<br>');
+  fit();
+}
+function fit(){
+  var w=wrap.clientWidth||794,k=Math.min(1,w/794);
+  sheet.style.transform=k<1?'scale('+k+')':'';
+  wrap.style.height=k<1?Math.ceil(sheet.offsetHeight*k)+'px':'';
+}
+window.addEventListener('resize',fit);
+var saveTimer=null;
+function persist(){clearTimeout(saveTimer);saveTimer=setTimeout(function(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(_){}},300);}
+function contractText(d){
+  var q=num(d.qty),p=num(d.price),u=String(d.unit||'cartons');
+  var L=['CONFIRMATION OF SALE','',
+  'Seller: '+(d.sellerName||'________'),
+  'Buyer: '+d.buyerName+', '+d.buyerAddr,
+  'Date: '+(dateFmt(d.date)||'________'),
+  'Seller\'s Contract No.: '+(d.contractNo||'________'),'',
+  'Commodity & Quality: '+d.commodity+' / '+d.quality,
+  'Quantity: '+(isNaN(q)?'________':fmt(q,0,3))+' '+u,
+  'Unit Price: '+d.cur+' '+(isNaN(p)?'________':money(p,d.cur))+' per '+u.replace(/s$/,''),
+  'Amount: '+d.cur+' '+((isNaN(q)||isNaN(p))?'________':money(q*p,d.cur)),'',
+  'Terms of Delivery: '+d.terms,
+  'Port of Shipment: '+d.pol,
+  'Port of Destination: '+d.pod,
+  'Time of Shipment: '+(d.shipment||'________'),
+  'Inspection: '+(d.inspection||'________'),
+  'Packing: '+d.packing,
+  'Insurance: '+d.insurance,
+  'Payment: '+d.payment,
+  'Special Terms & Conditions: '+d.special,'',
+  'Buyer (signature): '+d.buyerSign,
+  'Seller (signature): '+(d.sellerSign||'________'),
+  'Signed on: '+(dateFmt(d.signDate)||'________')];
+  return L.join('\n');
+}
+$('btnCopy').addEventListener('click',function(){
+  var t=contractText(S),box=$('txtBox');
+  box.value=t;
+  function manual(){box.style.display='block';box.focus();box.select();say('下の文章を長押しして、コピーしてください。');}
+  try{navigator.clipboard.writeText(t).then(function(){say('コピーしました。');},manual);}catch(e){manual();}
+});
+$('offerRead').addEventListener('click',function(){
+  var t=$('offerPaste').value,m=$('offerMsg'),n=function(x){return parseFloat(String(x).replace(/,/g,''));};
+  var q=t.match(/Quantity\s*:?\s*([\d,]+(?:\.\d+)?)\s*ctn/i),p=t.match(/Unit\s*Price[^:]*:?\s*USD\s*([\d,]+(?:\.\d+)?)/i),tt=t.match(/TOTAL\s*:?\s*USD\s*([\d,]+(?:\.\d+)?)/i);
+  if(!q){m.textContent='数量が読み取れません。「Quantity: 1,600 ctn」の形か確認してください（数字のあとに ctn）。';return;}
+  if(!p){m.textContent='単価が読み取れません。「Unit Price (CFR Shanghai): USD 17.70 per case」の形か確認してください（USDは数字の前）。';return;}
+  var qn=n(q[1]),pn=n(p[1]);
+  if(tt&&Math.abs(qn*pn-n(tt[1]))>0.005){m.textContent='数量×単価と TOTAL が合いません。貼った Offer を確認してください。';return;}
+  S.qty=String(qn);S.price=pn.toFixed(2);fillInputs();render();persist();
+  m.textContent='入りました：数量 '+fmt(qn,0,3)+' ctn ／ 単価 USD '+pn.toFixed(2)+'。この数字でよいか、目で確認してください。';
+});
+function chk(d){var q=num(d.qty),p=num(d.price),m=[];
+  REQUIRED.forEach(function(k){if(!String(d[k]==null?'':d[k]).trim())m.push(k);});
+  if(!isNaN(q)&&q>1600)m.push('qty>1600');
+  if(isNaN(q)||q<=0)m.push('qty');if(isNaN(p)||p<=0)m.push('price');
+  return m;}
+if(SUBMIT.url)$('btnSend').style.display='';
+$('btnSend').addEventListener('click',function(){
+  var m=chk(S);
+  if(m.length){say('まだ送れません。未入力・要確認：'+m.join(', ')+'（数量は積める数1,600以下）');return;}
+  var q=num(S.qty),p=num(S.price),F=SUBMIT.f,v={};
+  v[F.name]=S.sellerSign;v[F.no]=S.contractNo;v[F.qty]=fmt(q,0,3)+' ctn';v[F.price]=S.cur+' '+money(p,S.cur);
+  v[F.total]=S.cur+' '+money(q*p,S.cur);v[F.terms]=S.terms;v[F.pay]=S.payment;v[F.ins]=S.insurance;v[F.chk]='OK';v[F.std]=(q===STD.qty&&Math.abs(p-STD.price)<0.005)?'標準Offerと一致':'標準Offerと不一致';
+  var u=SUBMIT.url+(SUBMIT.url.indexOf('?')>=0?'&':'?')+Object.keys(v).filter(Boolean).map(function(k){return encodeURIComponent(k)+'='+encodeURIComponent(v[k]);}).join('&');
+  window.open(u,'_blank');say('Formsが開きます。保存したPDFを添付して送信してください。');
+});
+function helpSet(obj,msg){Object.keys(obj).forEach(function(k){S[k]=obj[k];});if(obj.shipDate)S.shipment='By '+dateFmt(obj.shipDate);fillInputs();render();persist();$('helpMsg').textContent=msg;}
+$('hOffer').addEventListener('click',function(){helpSet({qty:String(STD.qty),price:STD.price.toFixed(2)},'標準Offerの数量と単価を入れました。');});
+$('hAll').addEventListener('click',function(){helpSet({sellerName:'SAMPLE TRADING CO., LTD.',sellerSign:'Hanako Sato, Export Manager',qty:String(STD.qty),price:STD.price.toFixed(2),shipDate:'2026-11-30',inspection:"Seller's inspection"},'見本を入れました。会社名と名前は、自分のものに直してください。');});
+$('hClear').addEventListener('click',function(){helpSet({sellerName:'',sellerSign:'',qty:'',price:'',shipDate:'',shipment:'',inspection:''},'全部消しました。自分でやり直しましょう。');$('offerPaste').value='';$('offerMsg').textContent='';});
+function say(m){statusEl.textContent=m||'';}
+function fillInputs(){document.querySelectorAll('[data-k]').forEach(function(el){el.value=S[el.dataset.k]==null?'':S[el.dataset.k];});$('gloss').checked=!!S.gloss;}
+fillInputs();
+function onInput(e){var el=e.target,k=el.dataset.k;if(!k)return;S[k]=el.value;if(k==='shipDate'){S.shipment=el.value?'By '+dateFmt(el.value):'';}render();persist();}
+var lastK=null;
+function flash(k){if(!k)return;sheet.querySelectorAll('[data-f]').forEach(function(c){if((' '+c.dataset.f+' ').indexOf(' '+k+' ')>=0){c.classList.remove('flash');void c.offsetWidth;c.classList.add('flash');}});}
+document.querySelectorAll('[data-k]').forEach(function(el){el.addEventListener('focus',function(){lastK=el.dataset.k;flash(lastK);});});
+document.querySelectorAll('[data-k]').forEach(function(el){el.addEventListener('input',onInput);el.addEventListener('change',onInput);});
+$('gloss').addEventListener('change',function(e){S.gloss=e.target.checked?'1':'';render();persist();});
+function view(v){app.dataset.view=v;if(v==='preview')setTimeout(function(){flash(lastK);},200);$('tabForm').setAttribute('aria-pressed',v==='form');$('tabPrev').setAttribute('aria-pressed',v==='preview');window.scrollTo(0,0);setTimeout(fit,0);}
+$('tabForm').addEventListener('click',function(){view('form');});
+$('tabPrev').addEventListener('click',function(){view('preview');});
+$('toPreview').addEventListener('click',function(){view('preview');});
+function printSheet(blank){
+  var host=$('printHost');
+  host.innerHTML='<div class="sheet">'+build(S,blank)+'</div>';
+  var old=document.title;
+  var no=String(S.contractNo||'').trim().replace(/[^\w\-]+/g,'_');
+  var cn=String(S.sellerName||'').trim().replace(/[^\w\-]+/g,'_').replace(/^_+|_+$/g,'');document.title=blank?'Contract_blank_form':('Contract_'+(cn?cn+'_':'')+(no||'draft'));
+  try{window.print();}catch(e){say('印刷画面を開けませんでした。ブラウザのメニューから印刷してください。');}
+  setTimeout(function(){document.title=old;host.innerHTML='';},800);
+}
+$('btnPdf').addEventListener('click',function(){printSheet(false);say('印刷画面で「PDFに保存」を選んでください。');});
+$('btnBlank').addEventListener('click',function(){printSheet(true);say('印刷画面で「PDFに保存」を選んでください。');});
+
+render();
+})();
+</script>
+</body></html>
