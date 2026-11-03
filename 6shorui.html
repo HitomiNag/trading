@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>輸出書類フォーム（第6回）</title>
+<style>
+:root{--fg:#1d2733;--sub:#5b6773;--line:#d9dee3;--ac:#1a5fb4;--ok:#1b7a3d;--ng:#b3261e;--bg:#fff;--soft:#f4f6f8}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;font-size:18px;line-height:1.6}
+main{max-width:720px;margin:0 auto;padding:16px 16px 80px}
+h1{font-size:22px;margin:8px 0 4px}
+.sub{color:var(--sub);font-size:16px;margin:0 0 12px}
+.card{background:var(--soft);border-radius:10px;padding:12px 14px;margin:12px 0}
+.card h2{font-size:17px;margin:0 0 6px}
+.card table.t{width:100%;border-collapse:collapse;font-size:17px}
+.card table.t td{padding:2px 0}.card table.t td:last-child{text-align:right;white-space:nowrap}
+.f{margin:8px 0}
+.f label{display:block;font-size:15px;color:var(--sub);margin-bottom:2px}
+.f .how{font-size:14px;color:var(--sub);margin-top:2px}
+.f input{width:100%;font-size:18px;padding:9px 10px;border:2px solid var(--line);border-radius:8px;background:#fff;color:var(--fg)}
+.two{display:flex;gap:10px;flex-wrap:wrap}.two .f{flex:1 1 220px;min-width:0}
+.fixed{background:#fff;border:1px dashed var(--line);border-radius:8px;padding:6px 10px;font-size:15px}
+.bar{height:8px;background:var(--line);border-radius:4px;margin:10px 0}
+.bar i{display:block;height:100%;background:var(--ac);border-radius:4px;width:0;transition:width .3s}
+.step{border:1px solid var(--line);border-radius:10px;padding:14px;margin:12px 0}
+.step.done{background:#f3faf5;border-color:#b9dcc4}
+.step.lock{opacity:.45}
+.q{font-weight:700;margin:2px 0 4px}
+.how2{color:var(--sub);font-size:16px;margin:0 0 8px}
+.row{display:flex;gap:8px}
+.row input{flex:1;min-width:0;font-size:20px;padding:10px;border:2px solid var(--line);border-radius:8px}
+button{font-size:18px;padding:10px 16px;border:0;border-radius:8px;background:var(--ac);color:#fff;cursor:pointer}
+button.g{background:var(--soft);color:var(--fg);border:1px solid var(--line)}
+button.o{background:#fff;color:#c05a00;border:2px solid #c05a00}
+button.w{width:100%;margin:4px 0}
+.msg{margin:8px 0 0;font-size:17px}.msg.ok{color:var(--ok);font-weight:700}.msg.ng{color:var(--ng)}
+.hint{display:none;background:#fff8e1;border-radius:8px;padding:8px 10px;margin-top:8px;font-size:16px}
+.chs button{display:block;width:100%;margin:6px 0;text-align:left;background:#fff;color:var(--fg);border:2px solid var(--line)}
+.chk{list-style:none;padding:0;margin:0;font-size:16px}.chk li{padding:2px 0}.chk .y{color:var(--ok)}.chk .n{color:var(--ng)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.tabs button{background:#fff;color:var(--ac);border:2px solid var(--ac);font-size:16px;padding:8px 12px}
+.tabs button.on{background:var(--ac);color:#fff}
+#tbar{display:none;position:sticky;top:0;z-index:9;background:#fff3cd;border:1px solid #e0c36a;border-radius:8px;padding:8px;margin:0 0 8px;font-size:14px}
+#tbar button{font-size:14px;padding:6px 10px;margin:2px}
+#gapkey{font-size:14px;margin-top:6px;line-height:1.6}
+#gapkey table{border-collapse:collapse;width:100%}#gapkey td,#gapkey th{border:1px solid #c9b66a;padding:2px 6px;text-align:left}
+.mean{font-size:16px;color:#1d4f9e;background:#eef4fc;border-radius:8px;padding:6px 10px;margin-top:8px}
+.dcard{background:#eef4fc;border-left:5px solid var(--ac);border-radius:8px;padding:10px 14px;margin:8px 0;font-size:17px;line-height:1.7}
+.dcard .dt{font-weight:700;font-size:18px;margin-bottom:2px}
+.dcard b{color:var(--ac);margin-right:6px}
+.dcard .tm{margin-top:6px;padding-top:6px;border-top:1px dashed #b7c9e2;font-size:16px}
+.lockcard{background:#fff;border:2px dashed var(--ac);border-radius:10px;padding:14px;margin:8px 0}
+/* 書類 */
+.pv{width:100%;overflow:hidden;margin:8px 0}
+.pv.tabhide{display:none}
+.pv.lk{display:none}
+.sheet{width:794px;min-height:1123px;padding:52px 56px;background:#fff;color:#18202b;font:13.5px/1.5 Georgia,"Times New Roman","Hiragino Mincho ProN",serif;box-shadow:0 1px 3px rgba(0,0,0,.2),0 6px 20px rgba(0,0,0,.12);transform-origin:0 0}
+.sheet *{box-sizing:border-box}
+.sheet h3{text-align:center;font:600 24px/1.2 Arial,"Hiragino Sans",sans-serif;letter-spacing:.12em;margin:0 0 16px}
+.sheet table{width:100%;border-collapse:collapse;margin:8px 0;table-layout:fixed}
+.sheet td,.sheet th{border:1px solid #222;padding:5px 8px;vertical-align:top;text-align:left;overflow-wrap:anywhere}
+.sheet th{font:600 11px/1.35 Arial,sans-serif;background:#eee;letter-spacing:.04em}
+.sheet .r{text-align:right}
+.sheet table.nb td{border:none;padding:2px 4px}
+.sheet .lbl{display:block;font:10.5px/1.3 Arial,sans-serif;color:#444;text-transform:uppercase;letter-spacing:.03em}
+.sheet .sig{margin:38px 0 0 auto;width:60%}.sheet .sig div{border-top:1px solid #222;padding-top:4px}
+.sheet .box{border:1px solid #222;padding:6px 8px;min-height:56px;margin:8px 0}
+.sheet .blank{display:inline-block;min-width:7em;height:1.1em;border-bottom:1px solid #888;vertical-align:baseline}
+.sheet .note{font-size:12px;color:#333}
+@page{size:A4;margin:0}
+@media print{
+ body{background:#fff}
+ main{max-width:none;padding:0}
+ main>*:not(#docs){display:none!important}
+ #docs>*:not(#pvs){display:none!important}
+ #pvs{display:block!important}
+ .pv{height:auto!important;overflow:visible!important;display:block!important;margin:0;width:210mm}
+ .pv.lk{display:none!important}
+ .pv .sheet{transform:none!important;box-shadow:none;width:210mm;height:297mm;min-height:0;padding:15mm 16mm;overflow:hidden;page-break-after:always;break-after:page}
+ .pv.lastp .sheet{page-break-after:auto;break-after:auto}
+}
+</style></head><body><main>
+<h1>輸出書類フォーム</h1>
+<p class="sub">契約のデータを一度入れると、Commercial Invoice・Packing List・Shipping Instructions の3枚に反映されます。<br>重さと容積は、自分で計算して入れます。</p>
+<div id="tbar"></div>
+
+<div class="card"><h2>使う数字の表（みかん缶・20フィートコンテナ）</h2>
+<table class="t">
+<tr><td>1ケースの容積</td><td>0.01685 m³</td></tr>
+<tr><td>コンテナの容積</td><td>33 m³</td></tr>
+<tr><td>1ケースの総重量（G.W.）</td><td>12 kg</td></tr>
+<tr><td>コンテナの最大積載重量</td><td>20,000 kg</td></tr>
+<tr><td>1缶の内容総量</td><td>425 g</td></tr>
+<tr><td>1缶の缶込みの重さ</td><td>500 g</td></tr>
+<tr><td>1ケースの缶数</td><td>24 缶</td></tr>
+</table></div>
+
+<div class="card"><h2>① あなたの会社（第5回の契約書と同じもの）</h2>
+<div class="two">
+<div class="f"><label>会社名（Seller・英語）</label><input id="company" autocomplete="off" placeholder="例：○○ TRADING CO., LTD."></div>
+<div class="f"><label>署名する人（名前、役職・英語）</label><input id="signer" autocomplete="off" placeholder="例：Taro Yamada, Export Manager"></div>
+</div>
+<div class="f"><label>住所（Seller address）</label><input id="addr" autocomplete="off"></div>
+<button class="g w" id="impCM">契約書フォームの内容を読み込む（会社名・署名・数量・単価・船積み期限）</button>
+<div class="msg" id="impMsg"></div>
+</div>
+
+<div class="card"><h2>② 契約のデータ（標準Offer）</h2>
+<div class="f"><label>Offerを貼る（数量・単価が入ります）</label>
+<textarea id="offerPaste" rows="3" placeholder="Teams や原価計算フォームでコピーした Offer を貼る" style="width:100%;font-size:16px;padding:8px;border:2px solid var(--line);border-radius:8px"></textarea></div>
+<button class="g w" id="offerRead">読み取る</button><div class="msg" id="offerMsg"></div>
+<div class="two">
+<div class="f"><label>数量　＿＿ ctn</label><input id="qty" inputmode="numeric" autocomplete="off"><div class="how">数字だけ。例 1600</div></div>
+<div class="f"><label>単価（CFR）　USD ＿＿ ／ctn</label><input id="price" inputmode="decimal" autocomplete="off"><div class="how">数字だけ。例 17.70</div></div>
+</div>
+<div class="two">
+<div class="f"><label>契約日（Contract date）</label><input id="cdate" autocomplete="off"></div>
+<div class="f"><label>船積み期限（By …）</label><input id="shipby" autocomplete="off"></div>
+</div>
+<div class="two">
+<div class="f"><label>買い手（固定）</label><div class="fixed">SH TRADING CO., LTD.<br>Attn: Mr. Li Wei, 100 Example Road, Shanghai, China</div></div>
+<div class="f"><label>取引条件（固定）</label><div class="fixed">CFR Shanghai, China<br>T/T in advance (100% before shipment)<br>Shimizu, Japan → Shanghai, China</div></div>
+</div></div>
+
+<div class="card"><h2>③ 工場から届いた生産内訳と、荷印</h2>
+<p class="sub" style="margin:0 0 6px">工場から、生産内訳が届きました。生産日が違うので、2つのロットに分かれています。</p>
+<div class="card" style="background:#fff;margin:6px 0" id="lotinfo"></div>
+<div class="two">
+<div class="f"><label>ロット1の荷印（3文字程度）</label><input id="m1" maxlength="6" autocomplete="off" placeholder="例：A01"><div class="how">ロットを区別できる文字。自分で決めます</div></div>
+<div class="f"><label>ロット2の荷印（3文字程度）</label><input id="m2" maxlength="6" autocomplete="off" placeholder="例：B02"><div class="how">ロット1とは、別の文字にします</div></div>
+</div>
+<div class="mean"><b>意味</b>　荷印は、このロットの目印です。ケースの外側にも書き、3枚の書類とも同じ文字にします。クレームが来たとき、どの貨物かを追跡する手がかりになります。生産日や賞味期限などの詳しい情報は、書類には載せず、別紙で買い手に報告します。</div>
+</div>
+
+<div class="card"><h2>④ インボイスの番号と日付（自分で決める）</h2>
+<div class="two">
+<div class="f"><label>Invoice No.</label><input id="invno" autocomplete="off" placeholder="例：INV-001"><div class="how">自社のルールで、自分で決めます</div></div>
+<div class="f"><label>Invoice Date</label><input id="invdate" autocomplete="off" placeholder="例：10 November 2026"><div class="how">書き方は、英語の日付（日 月 年）</div></div>
+</div></div>
+
+<h2 style="font-size:19px;margin:18px 0 4px">⑤ 重さと容積を計算する</h2>
+<p class="sub">答えは「数字＋単位」。例：<b>27.0 m3</b>　<b>19,200 kg</b>（単位は数字のあと）</p>
+<div class="bar"><i id="pg"></i></div>
+<div id="note" class="sub" style="color:var(--ac)"></div>
+<div id="steps"></div>
+
+<section id="docs">
+<h2 style="font-size:19px;margin:18px 0 4px">⑥ 書類を確認して、PDFで保存</h2>
+<div class="card"><h2>提出前チェック（×があっても、PDFは保存できます）</h2><ul class="chk" id="checks"></ul></div>
+<div class="tabs" id="tabs"></div>
+<div id="dcard"></div>
+<div id="lockcard" class="lockcard" style="display:none"><div class="q">③ Shipping Instructions は、先生が合言葉を言うと開きます</div>
+<div class="row"><input id="wd" autocomplete="off" placeholder="合言葉（半角英字）"><button id="nx">開く</button></div><div class="msg" id="wm"></div></div>
+<div id="pvs"></div>
+<button id="print" style="margin-top:8px;width:100%">3ページPDFで保存（印刷 → PDFに保存）</button>
+<div class="msg" id="pm"></div>
+</section>
+
+<details class="card" id="help"><summary style="cursor:pointer;font-weight:700">困ったとき</summary>
+<p class="sub" style="margin:8px 0">わからなくなったら、答えや見本を入れてもらえます。入った数字を見て、式を確認しましょう。</p>
+<button class="w" id="h1">この問題の答えを入れる</button>
+<button class="w" id="h2">ここから最後まで、答えを入れる</button>
+<button class="w o" id="h3">自分でやり直す（⑤の計算を最初から。会社名などは残ります）</button>
+<button class="g w" id="hS">会社名・署名の見本を入れる</button>
+<button class="g w" id="hD">契約のデータを標準Offerに戻す</button>
+<div class="msg" id="hm"></div></details>
+</main>
+<script>
+(function(){
+'use strict';
+var R=function(x,n){return Math.round((x+1e-9)*Math.pow(10,n))/Math.pow(10,n)};
+var $=function(id){return document.getElementById(id)};
+var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
+var VER='boeki6-docs-v1',WORD='booking',CMKEY='contract-maker-student-simple-v2';
+var DEF={company:'',signer:'',addr:'Shizuoka, Japan',invno:'',invdate:'',m1:'',m2:'',cdate:'28 October 2026',shipby:'30 November 2026',qty:'1600',price:'17.70'};
+var KEYS=Object.keys(DEF);
+var FIX={buyer:'SH TRADING CO., LTD.',attn:'Mr. Li Wei, Purchasing Manager',baddr:'100 Example Road, Shanghai, China',pol:'Shimizu, Japan',pod:'Shanghai, China',m3:0.01685,kg:12,canG:425,cans:24};
+var teacher=location.hash==='#teacher';
+var ok=[false,false,false,false,false,false],siOpen=false,gap=false,tab=0,cur=0,note='',S=[];
+var MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+function z(s){return String(s==null?'':s).replace(/[０-９．，]/g,function(c){return c==='．'?'.':c==='，'?',':String.fromCharCode(c.charCodeAt(0)-0xFEE0)})}
+function val(k){return $(k).value.trim()}
+function numv(k){var n=parseFloat(z($(k).value).replace(/,/g,''));return isFinite(n)?n:NaN}
+function nf(x){return (isFinite(x)?x:0).toLocaleString('en-US',{maximumFractionDigits:0})}
+function mny(x){return x.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function dateFmt(s){var p=String(s||'').split('-').map(Number);return(p.length===3&&p[0])?p[2]+' '+MONTHS[p[1]-1]+' '+p[0]:''}
+
+/* ---- 保存（入力した値だけ。キーにバージョン） ---- */
+function saveIn(){try{var o={};KEYS.forEach(function(k){o[k]=$(k).value});localStorage.setItem(VER+'_in',JSON.stringify(o))}catch(e){}}
+function savePg(){if(teacher)return;try{localStorage.setItem(VER+'_pg',JSON.stringify({ok:ok,si:siOpen,q:val('qty'),p:val('price')}))}catch(e){}}
+function loadAll(){
+ var o={};try{o=JSON.parse(localStorage.getItem(VER+'_in')||'{}')||{}}catch(e){}
+ KEYS.forEach(function(k){$(k).value=(o[k]!=null)?o[k]:DEF[k]});
+ try{var p=JSON.parse(localStorage.getItem(VER+'_pg')||'null');
+  if(p&&p.q===val('qty')&&p.p===val('price')&&Array.isArray(p.ok)&&p.ok.length===6){ok=p.ok;siOpen=!!p.si}}catch(e){}
+}
+
+/* ---- 計算ステップ ---- */
+function steps(){
+ var q=numv('qty');if(!(q>0))q=0;
+ var vol=R(q*FIX.m3,1),gw=q*FIX.kg,nwc=R(FIX.canG*FIX.cans/1000,1),nw=R(nwc*q,0),diff=gw-nw;
+ return [
+ {m:'コンテナに積めるかを見る数字です。33 m³を超えると、1本に入りません。',q:'①総容積（Packing List の Measurement）',how:'1ケースの容積 × 数量。小数第1位まで',a:vol,tol:.05,u:'m3',f:function(a){return a.toFixed(1)+' m3'},hint:'0.01685 × '+nf(q),rough:'コンテナは33 m³です。それより大きい数になったら、位の間違いです'},
+ {m:'コンテナの重量の上限（20,000 kg）に収まるかを見る数字です。船に積む前の、重さの申告の元にもなります。',q:'②総重量 G.W.（Gross Weight）',how:'1ケースの総重量 × 数量',a:gw,tol:.5,u:'kg',f:function(a){return nf(a)+' kg'},hint:'12 × '+nf(q),rough:'コンテナの最大積載は20,000 kg。1ケース約12 kg × 約'+nf(q)+' ケースで、見当をつけましょう',chk:function(x){return x===12?'1ケースの重さです。数量を掛けます':null}},
+ {m:'みかんとシロップなど、中身だけの重さです。包装を除いた量で、通関や取引で、中身の量を確かめるときに使います。',q:'③1ケースの純重量 N.W.（Net Weight）',how:'1缶の内容総量 425 g × 24缶。kg に直す',a:nwc,tol:.001,u:'kg',f:function(a){return a.toFixed(1)+' kg'},hint:'425 × 24 ＝ 10,200 g。1,000 g ＝ 1 kg',chk:function(x){return Math.abs(x-10200)<1?'g のままです。kg に直します（1,000 g ＝ 1 kg）':null},rough:'1ケースは約10 kgです'},
+ {m:'1ケースの中身の重さ × ケース数です。Packing List の N.W. 欄に入ります。',q:'④総純重量 N.W.',how:'③ × 数量',a:nw,tol:.5,u:'kg',f:function(a){return nf(a)+' kg'},hint:'③ × '+nf(q),rough:'②の総重量より、少し小さくなります'},
+ {m:'G.W.（総重量）は、缶などの包装を含みます。だから G.W. は、いつも N.W. 以上になります。逆になっていたら、書類のずれです。',q:'⑤G.W. と N.W. の差',how:'② − ④',a:diff,tol:.5,u:'kg',f:function(a){return nf(a)+' kg'},hint:'②の答え − ④の答え',rough:'②と④の差です。2,000 kg台になります'},
+ {m:'12 kg は「500 g（缶込み）× 24缶」です。この教材では、段ボール箱の重さは入れていません。実務では、箱の重さも G.W. に入ります。',q:'⑥この差は、何の重さ？',how:'1ケースあたり 1.8 kg の差です（G.W. 12 kg − N.W. 10.2 kg）',choice:['中身（みかんとシロップ）の重さ','缶（容器）の重さ','段ボール箱の重さ'],a:1,f:function(){return '缶（容器）の重さ'},hint:'1缶の缶込みは500 g、内容総量は425 g。差は1缶あたり？'}
+ ];
+}
+function bad(t){var m=$('ms');if(m){m.className='msg ng';m.textContent=t}}
+function check(){
+ var s=S[cur],v=parseU($('in').value);
+ if(!v)return bad('数字を入れてください');
+ var lab=s.u==='m3'?'m3（m³）':'kg';
+ if(!v.pre&&!v.post)return bad('単位がありません。数字のあとに '+lab+' を付けてください（例：100 '+s.u+'）');
+ if(v.pre)return bad('この単位は数字のあとに書きます（例：100 '+s.u+'）');
+ var U=s.u==='m3'?['m3','cbm']:['kg'];
+ if(U.indexOf(v.post)<0)return bad('単位が違います。ここは '+lab+' です');
+ if(Math.abs(v.n-s.a)<=s.tol+1e-9){ok[cur]=true;note='';render();return}
+ var c=s.chk&&s.chk(v.n);if(c)return bad(c);
+ var r=v.n/s.a;
+ if(Math.abs(r-10)<.05||Math.abs(r-.1)<.005||Math.abs(r-100)<.5||Math.abs(r-.01)<.0005)return bad('位が違います。'+(s.rough||'ざっくり見積もってみましょう'));
+ bad('もう一度。式を確認してみましょう');
+}
+function parseU(t){
+ t=z(t);var m=t.match(/-?\d[\d,]*\.?\d*|\.\d+/);if(!m)return null;
+ var cl=function(x){return x.replace(/\s/g,'').toLowerCase().replace('³','3').replace('㎥','m3')};
+ return {n:parseFloat(m[0].replace(/,/g,'')),pre:cl(t.slice(0,m.index)),post:cl(t.slice(m.index+m[0].length))};
+}
+function answerChoice(i){
+ var s=S[cur],m=$('ms');
+ if(i===s.a){ok[cur]=true;note='';render();return}
+ m.className='msg ng';
+ m.textContent=i===0?'中身は N.W. のほうです。G.W. − N.W. に残るのは、中身以外の重さです':'この教材では、段ボール箱の重さは入れていません。12 kg は「500 g（缶込み）× 24缶」です';
+}
+function renderSteps(){
+ S=steps();var box=$('steps');box.innerHTML='';
+ if(!(numv('qty')>0)){box.innerHTML='<div class="step"><div class="q">先に、②で数量を入れてください</div></div>';$('pg').style.width='0';return}
+ cur=ok.indexOf(false);if(cur<0)cur=S.length;
+ S.forEach(function(s,i){
+  var d=document.createElement('div'),dn=ok[i];d.className='step'+(dn?' done':(i>cur?' lock':''));
+  if(dn)d.innerHTML='<div class="q">'+s.q+'</div><div class="msg ok">'+s.f(s.a)+'</div>'+(s.m?'<div class="mean"><b>意味</b>　'+s.m+'</div>':'');
+  else if(i===cur){
+   if(s.choice)d.innerHTML='<div class="q">'+s.q+'</div><p class="how2">'+s.how+'</p><div class="chs">'+s.choice.map(function(c,j){return '<button data-c="'+j+'">'+c+'</button>'}).join('')+'</div><div class="msg" id="ms"></div><div class="hint" id="ht">'+s.hint+'</div><button class="g" id="hb" style="margin-top:8px">ヒント</button>';
+   else d.innerHTML='<div class="q">'+s.q+'</div><p class="how2">'+s.how+'</p><p class="how2" style="font-weight:700;color:#1d4f9e;margin:2px 0 6px">入力のしかた：＿＿ '+(s.u==='m3'?'m3':'kg')+'（単位は数字のあと）</p><div class="row"><input id="in" inputmode="text" autocomplete="off" placeholder="'+(s.u==='m3'?'10.0 m3':'100 kg')+'"><button id="go">答える</button></div><div class="msg" id="ms"></div><div class="hint" id="ht">'+s.hint+'</div><button class="g" id="hb" style="margin-top:8px">ヒント</button>';
+  }else d.innerHTML='<div class="q">'+s.q+'</div>';
+  box.appendChild(d);
+ });
+ $('pg').style.width=(ok.filter(function(x){return x}).length/S.length*100)+'%';
+ $('note').textContent=note;
+ if(cur<S.length){
+  $('hb').onclick=function(){$('ht').style.display='block'};
+  if(S[cur].choice)box.querySelectorAll('.chs button').forEach(function(b){b.onclick=function(){answerChoice(+b.dataset.c)}});
+  else{$('go').onclick=check;$('in').onkeydown=function(e){if(e.key==='Enter')check()}}
+ }else{
+  var e=document.createElement('div');e.className='msg ok';
+  e.textContent='計算は合格です。容積 '+S[0].f(S[0].a)+' は、コンテナ33 m³に収まります。Packing List に数字が入りました。';box.appendChild(e);
+ }
+}
+
+/* ---- 書類 ---- */
+function B(x,w){x=(x==null?'':String(x)).trim();return x?esc(x):'<span class="blank" style="min-width:'+(w||7)+'em"></span>'}
+function mkLots(){
+ var qq=gap?1600:numv('qty'),ok2=qq>0,l2=ok2?Math.round(qq*0.4):0,l1=ok2?qq-l2:0;
+ var gate=function(i){return gap||ok[i]},nwc=R(FIX.canG*FIX.cans/1000,1);
+ return [l1,l2].map(function(c,i){return {c:c,m:gap?['A01','B02'][i]:val('m'+(i+1)),
+  gw:(ok2&&gate(1))?nf(c*FIX.kg):null,nw:(ok2&&gate(3))?nf(R(c*nwc,0)):null,vol:(ok2&&gate(0))?R(c*FIX.m3,1).toFixed(1):null}});
+}
+function data(){
+ var lots=mkLots();
+ if(gap)return {lots:lots,company:'PACIFIC ORCHARD FOODS CO., LTD.',addr:'Shizuoka, Japan',signer:'Taro Yamada, Export Manager',invno:'POF-INV-021',invdate:'10 November 2026',
+  cdate:'28 October 2026',shipby:'30 November 2026',q:1600,price:17.07,total:27312.00,ciTerms:'CFR Shanghai, China',siConsignee:'PACIFIC ORCHARD FOODS CO., LTD.',siConsigneeAddr:'Shizuoka, Japan',siPod:'Shenzhen, China',
+  plGw:'1,920',plVol:'269.6',siGw:'19,200',siVol:'27.0',nwc:'10.2',nw:'16,320'};
+ var q=numv('qty'),p=numv('price'),S0=steps();
+ var vol=ok[0]?S0[0].a.toFixed(1):null,gw=ok[1]?nf(S0[1].a):null;
+ return {lots:lots,company:val('company'),addr:val('addr'),signer:val('signer'),invno:val('invno'),invdate:val('invdate'),cdate:val('cdate'),shipby:val('shipby'),
+  q:q,price:p,total:R(q*p,2),ciTerms:'CFR Shanghai, China',siConsignee:FIX.buyer,siConsigneeAddr:FIX.baddr,siPod:FIX.pod,
+  plGw:gw,plVol:vol,siGw:gw,siVol:vol,nwc:ok[2]?S0[2].a.toFixed(1):null,nw:ok[3]?nf(S0[3].a):null};
+}
+function goods(){return 'Canned Mandarin Oranges<br>425 g × 24 cans per carton'}
+function marks(d,si){return d.lots.map(function(l,i){return B((gap&&si&&i===1)?'B20':l.m,3)}).join('<br>')}
+function parties(d,cons,consAddr,si){return '<table><tr><td style="width:50%"><span class="lbl">'+(si?'Shipper':'Seller')+'</span><b>'+B(d.company,16)+'</b><br>'+B(d.addr,12)+'</td><td><span class="lbl">'+(si?'Consignee':'Sold to / Buyer')+'</span><b>'+esc(cons)+'</b><br>'+(cons===FIX.buyer?'Attn: '+FIX.attn+'<br>':'')+esc(consAddr)+'</td></tr></table>'}
+function sig(d){return '<div class="sig"><div>Signed by: '+B(d.signer,12)+'<br>for '+B(d.company,12)+'</div></div>'}
+function sheetCI(d){
+ return '<h3>COMMERCIAL INVOICE</h3>'+
+ '<table class="nb"><tr><td><span class="lbl">Invoice No.</span>'+B(d.invno,10)+'</td><td><span class="lbl">Date</span>'+B(d.invdate,10)+'</td></tr></table>'+
+ parties(d,FIX.buyer,FIX.baddr)+
+ '<table><tr><td><span class="lbl">Port of loading</span>'+FIX.pol+'</td><td><span class="lbl">Port of discharge</span>'+FIX.pod+'</td></tr>'+
+ '<tr><td><span class="lbl">Terms of delivery</span>'+esc(d.ciTerms)+'</td><td><span class="lbl">Payment</span>T/T in advance (100% before shipment)</td></tr>'+
+ '<tr><td><span class="lbl">Contract date</span>'+B(d.cdate,9)+'</td><td><span class="lbl">Shipment</span>By '+B(d.shipby,9)+'</td></tr></table>'+
+ '<table><colgroup><col style="width:22%"><col style="width:30%"><col style="width:14%"><col style="width:16%"><col style="width:18%"></colgroup><tr><th>Marks</th><th>Description of goods</th><th class="r">Quantity</th><th class="r">Unit price (USD/ctn)</th><th class="r">Amount (USD)</th></tr>'+
+ '<tr><td>'+marks(d)+'</td><td>'+goods()+'</td><td class="r">'+(isFinite(d.q)?nf(d.q)+' ctn':B('',3))+'</td><td class="r">'+(isFinite(d.price)?mny(d.price):B('',3))+'</td><td class="r">'+(isFinite(d.total)?mny(d.total):B('',3))+'</td></tr>'+
+ '<tr><td colspan="4" class="r"><b>TOTAL</b></td><td class="r"><b>USD '+(isFinite(d.total)?mny(d.total):'')+'</b></td></tr></table>'+sig(d);
+}
+function sheetPL(d){
+ var q=isFinite(d.q)?nf(d.q):'';
+ return '<h3>PACKING LIST</h3>'+
+ '<table class="nb"><tr><td><span class="lbl">Invoice No.</span>'+B(d.invno,10)+'</td><td><span class="lbl">Date</span>'+B(d.invdate,10)+'</td></tr></table>'+
+ parties(d,FIX.buyer,FIX.baddr)+
+ '<table><tr><td><span class="lbl">Port of loading</span>'+FIX.pol+'</td><td><span class="lbl">Port of discharge</span>'+FIX.pod+'</td></tr></table>'+
+ '<table><colgroup><col style="width:20%"><col style="width:26%"><col style="width:12%"><col style="width:14%"><col style="width:14%"><col style="width:14%"></colgroup><tr><th>Marks</th><th>Description of goods</th><th class="r">Cartons</th><th class="r">N.W. (kg)</th><th class="r">G.W. (kg)</th><th class="r">Measurement (m³)</th></tr>'+
+ d.lots.map(function(l,i){return '<tr><td>'+B(l.m,3)+'</td><td>'+goods()+(i===0?'<br><span class="note">Carton size: 45.6 × 30.8 × 12 cm</span>':'')+'</td><td class="r">'+(l.c>0?nf(l.c)+' ctn':B('',3))+'</td><td class="r">'+B(l.nw,4)+'</td><td class="r">'+B(l.gw,4)+'</td><td class="r">'+B(l.vol,4)+'</td></tr>'}).join('')+
+ '<tr><td colspan="2" class="r"><b>TOTAL</b></td><td class="r"><b>'+q+' ctn</b></td><td class="r"><b>'+B(d.nw,4)+' kg</b></td><td class="r"><b>'+B(d.plGw,4)+' kg</b></td><td class="r"><b>'+B(d.plVol,4)+' m³</b></td></tr></table>'+
+ '<table class="nb"><tr><td>Per carton: N.W. '+B(d.nwc,3)+' kg ／ G.W. 12 kg ／ 0.01685 m³</td></tr><tr><td>Packed in: 1 × 20ft container</td></tr></table>'+sig(d);
+}
+function sheetSI(d){
+ return '<h3>SHIPPING INSTRUCTIONS</h3>'+
+ '<table class="nb"><tr><td><span class="lbl">To</span>Forwarder</td><td><span class="lbl">Date</span>'+B(d.invdate,10)+'</td></tr></table>'+
+ parties(d,d.siConsignee,d.siConsigneeAddr,true)+
+ '<table><tr><td style="width:50%"><span class="lbl">Notify party</span><b>'+FIX.buyer+'</b><br>Attn: '+FIX.attn+'</td><td><span class="lbl">Freight</span>FREIGHT PREPAID (CFR)</td></tr>'+
+ '<tr><td><span class="lbl">Port of loading</span>'+FIX.pol+'</td><td><span class="lbl">Port of discharge</span>'+esc(d.siPod)+'</td></tr>'+
+ '<tr><td><span class="lbl">Container</span>1 × 20ft container</td><td><span class="lbl">Shipment by</span>'+B(d.shipby,9)+'</td></tr>'+
+ '<tr><td><span class="lbl">Invoice No.</span>'+B(d.invno,10)+'</td><td><span class="lbl">Booking No. (forwarder fills)</span>&nbsp;</td></tr></table>'+
+ '<table><colgroup><col style="width:24%"><col style="width:34%"><col style="width:14%"><col style="width:14%"><col style="width:14%"></colgroup><tr><th>Marks</th><th>Description of goods</th><th class="r">Cartons</th><th class="r">G.W. (kg)</th><th class="r">Measurement (m³)</th></tr>'+
+ '<tr><td>'+marks(d,true)+'</td><td>'+goods()+'</td><td class="r">'+(isFinite(d.q)?nf(d.q)+' ctn':B('',3))+'</td><td class="r">'+B(d.siGw,4)+'</td><td class="r">'+B(d.siVol,4)+'</td></tr></table>'+
+ '<div class="box"><span class="lbl">B/L instructions</span>Bill of Lading: 3 originals, “FREIGHT PREPAID”, consignee as above.</div>'+
+ '<div class="box"><span class="lbl">Vessel / Voyage (forwarder fills)</span>&nbsp;</div>'+sig(d);
+}
+var DOCCARD=[
+ {t:'Commercial Invoice（商業送り状）',who:'売り手が作ります。買い手が、代金の支払いと輸入通関に使います。乙仲（フォワーダー）も、輸出の通関に使います。',what:'品名、数量、単価、金額、取引条件。契約書のとおりに書きます。品名と単価が同じなので、荷印が2つあっても、1行です。',bad:'代金が食い違います。通関で止まります。',hurt:'買い手。支払いも、輸入通関も進みません。'},
+ {t:'Packing List（梱包明細書）',who:'乙仲（フォワーダー）、税関、船会社、買い手が、現物と照らすのに使います。',what:'荷印ごとに1行（今回は2行）。ケース数、N.W.、G.W.、容積。合計は、Invoice の数量と合わせます。',bad:'コンテナに積めない数字になります。現物と書類が合わず、検査で止まります。',hurt:'税関と買い手。現物と照らせず、荷受けが進みません。',terms:'<b>行の数え方</b>　Invoice は「価格の単位」、Packing List は「現物の単位（荷印）」、Shipping Instructions は「貨物全体」で、行が決まります。<br>下の行を縦に足すと、合計と合います。合わなければ、どこかが間違いです。'},
+ {t:'Shipping Instructions（船積み依頼書）',who:'売り手が乙仲（フォワーダー）に出します。乙仲は、これで船を予約し、B/L（船荷証券）の下書きを作ります。（第7回）',what:'荷送人、荷受人、着荷通知先、積出港・仕向港、運賃の条件、貨物の内容。',bad:'B/L が、そのまま間違います。荷受人が違えば受け取れず、仕向港が違えば別の港に着きます。',hurt:'売り手。乙仲が動けず、船が取れません。着いたあとは、買い手も困ります。',
+  terms:'<b>荷送人</b>（Shipper）貨物を送る人。今回は売り手。<br><b>荷受人</b>（Consignee）B/L の上で、貨物を受け取る人。今回は T/T 前払いなので、買い手。（L/C 取引では、信用状の指示で「TO ORDER」（指図式）になることもあります）<br><b>着荷通知先</b>（Notify party）貨物が着いたときに、連絡する先。'}
+];
+function renderDocs(){
+ var d=data(),open=siOpen||gap;
+ var hs=[sheetCI(d),sheetPL(d),sheetSI(d)];
+ $('pvs').innerHTML=hs.map(function(h,i){
+  var c='pv'+(i!==tab?' tabhide':'')+((i===2&&!open)?' lk':'')+((i===(open?2:1))?' lastp':'');
+  return '<div class="'+c+'"><div class="sheet">'+h+'</div></div>'}).join('');
+ $('tabs').innerHTML=['① Invoice','② Packing List','③ Shipping Instr.'].map(function(t,i){return '<button data-t="'+i+'" class="'+(i===tab?'on':'')+'">'+t+(i===2&&!open?'（未開）':'')+'</button>'}).join('');
+ $('tabs').querySelectorAll('button').forEach(function(b){b.onclick=function(){tab=+b.dataset.t;renderDocs()}});
+ $('lockcard').style.display=(tab===2&&!open)?'block':'none';
+ var dc=DOCCARD[tab];
+ $('dcard').innerHTML=(tab===2&&!open)?'':'<div class="dcard"><div class="dt">'+dc.t+'</div><div><b>誰が使う</b>'+dc.who+'</div><div><b>何を書く</b>'+dc.what+'</div><div><b>ずれると</b>'+dc.bad+'</div><div><b>困るのは</b>'+dc.hurt+'</div>'+(dc.terms?'<div class="tm">'+dc.terms+'</div>':'')+'</div>';
+ fit();
+}
+function fit(){document.querySelectorAll('.pv').forEach(function(pv){
+ var sh=pv.firstElementChild,w=pv.clientWidth;if(!w){return}
+ var k=Math.min(1,w/794);sh.style.transform=k<1?'scale('+k+')':'';pv.style.height=k<1?Math.ceil(sh.offsetHeight*k)+'px':'';})}
+window.addEventListener('resize',fit);
+
+function renderChecks(){
+ var L=[],q=numv('qty'),p=numv('price');
+ function add(c,t){L.push('<li class="'+(c?'y':'n')+'">'+(c?'○ ':'× ')+t+'</li>')}
+ add(!!val('company')&&!!val('signer'),'会社名と署名者が入っている');
+ add(!!val('invno')&&!!val('invdate'),'インボイスの番号と日付を、自分で決めて入れている');
+ add(q>0&&Math.floor(q)===q,'数量が整数');
+ add(!(q>1666),'数量がコンテナに載る（重量の上限 20,000 ÷ 12 ＝ 1,666 ctn 以下）');
+ add(q===1600&&Math.abs(p-17.70)<.005,'標準Offerと同じ（1,600 ctn × USD 17.70 ＝ USD 28,320.00）');
+ add(!!val('m1')&&!!val('m2')&&val('m1')!==val('m2'),'荷印を、ロットごとに別の文字で決めている（3文字程度）');
+ add(ok.every(function(x){return x}),'⑤の計算が最後まで合っている（'+ok.filter(function(x){return x}).length+' / 6）');
+ add(siOpen,'Shipping Instructions が開いている（PDFが3ページになる）');
+ $('checks').innerHTML=L.join('');
+}
+function renderLots(){
+ var q=numv('qty');
+ if(!(q>0)){$('lotinfo').innerHTML='先に、②で数量を入れてください';return}
+ var l2=Math.round(q*0.4),l1=q-l2;
+ $('lotinfo').innerHTML='<table class="t"><tr><td>ロット1　製造日 2026.10.29</td><td>'+nf(l1)+' ctn</td></tr><tr><td>ロット2　製造日 2026.10.30</td><td>'+nf(l2)+' ctn</td></tr><tr><td><b>合計（足して、数量と合うか確かめる）</b></td><td><b>'+nf(l1+l2)+' ctn</b></td></tr></table><div class="mean" style="margin:6px 0 0"><b>確認が必要</b>　製造日は、日本式（年.月.日）の書き方です。書類の日付は、英語（日 月 年）で書きます。日付の書き方は、国や相手によって違うので、確認が必要です。</div>';
+}
+function render(){
+ renderLots();
+ $('docs').querySelector('.card').style.display=gap?'none':'';
+ renderSteps();renderDocs();renderChecks();savePg();
+}
+
+/* ---- 入力まわり ---- */
+KEYS.forEach(function(k){$(k).addEventListener('input',function(){
+ if((k==='qty'||k==='price')&&ok.some(function(x){return x})){ok=ok.map(function(){return false});note='数量や単価を変えたので、⑤の計算をやり直します。'}
+ saveIn();render()})});
+$('offerRead').onclick=function(){
+ var t=z($('offerPaste').value),m=$('offerMsg'),n=function(x){return parseFloat(String(x).replace(/,/g,''))};
+ var q=t.match(/Quantity\s*:?\s*([\d,]+(?:\.\d+)?)\s*ctn/i),p=t.match(/Unit\s*Price[^:]*:?\s*USD\s*([\d,]+(?:\.\d+)?)/i),tt=t.match(/TOTAL\s*:?\s*USD\s*([\d,]+(?:\.\d+)?)/i);
+ if(!q){m.className='msg ng';m.textContent='数量が読み取れません。「Quantity: 1,600 ctn」の形か確認してください（数字のあとに ctn）。';return}
+ if(!p){m.className='msg ng';m.textContent='単価が読み取れません。「Unit Price (CFR Shanghai): USD 17.70 per case」の形か確認してください（USDは数字の前）。';return}
+ var qn=n(q[1]),pn=n(p[1]);
+ if(tt&&Math.abs(qn*pn-n(tt[1]))>0.005){m.className='msg ng';m.textContent='数量 × 単価 と TOTAL が合いません。貼った Offer を確認してください。';return}
+ $('qty').value=String(qn);$('price').value=pn.toFixed(2);
+ if(ok.some(function(x){return x})){ok=ok.map(function(){return false})}
+ saveIn();render();m.className='msg ok';m.textContent='入りました：'+nf(qn)+' ctn ／ USD '+pn.toFixed(2)+'。この数字でよいか、目で確認してください。';
+};
+$('impCM').onclick=function(){
+ var m=$('impMsg');
+ try{var j=JSON.parse(localStorage.getItem(CMKEY)||'null');
+  if(!j){m.className='msg ng';m.textContent='読み込める内容がありません（契約書フォームと別の場所で開いている場合は、手で入力してください）。';return}
+  var got=[];
+  if(j.sellerName){$('company').value=j.sellerName;got.push('会社名')}
+  if(j.sellerSign){$('signer').value=j.sellerSign;got.push('署名')}
+  if(j.qty){$('qty').value=j.qty;got.push('数量')}
+  if(j.price){$('price').value=j.price;got.push('単価')}
+  if(j.shipDate&&dateFmt(j.shipDate)){$('shipby').value=dateFmt(j.shipDate);got.push('船積み期限')}
+  if(ok.some(function(x){return x})){ok=ok.map(function(){return false})}
+  saveIn();render();
+  m.className=got.length?'msg ok':'msg ng';m.textContent=got.length?'読み込みました：'+got.join('・')+'。内容を目で確認してください。':'読み込める内容がありません。手で入力してください。';
+ }catch(e){m.className='msg ng';m.textContent='読み込めませんでした。手で入力してください。'}
+};
+$('nx').onclick=function(){
+ var w=z($('wd').value).replace(/[Ａ-Ｚａ-ｚ]/g,function(c){return String.fromCharCode(c.charCodeAt(0)-0xFEE0)}).trim().toLowerCase();
+ if(w!==WORD){var m=$('wm');m.className='msg ng';m.textContent='合言葉が違います。先生が言う言葉を、半角英字で入れてください';return}
+ siOpen=true;$('wd').value='';render();
+};
+$('print').onclick=function(){
+ var old=document.title,cn=val('company').replace(/[^\w\-]+/g,'_').replace(/^_+|_+$/g,'');
+ document.title=gap?'Export_docs_with_errors':'Export_docs_'+(cn||'draft');
+ $('pm').className='msg';$('pm').textContent=(siOpen||gap)?'印刷画面で「PDFに保存」を選んでください（3ページ）。':'Shipping Instructions が未開のため、PDFは2ページになります。先生の合言葉のあとに、もう一度保存してください。';
+ try{window.print()}catch(e){$('pm').textContent='印刷画面を開けませんでした。ブラウザのメニューから印刷してください。'}
+ setTimeout(function(){document.title=old},800);
+};
+
+/* ---- 困ったとき ---- */
+function fillFrom(one){var g=0;while(g++<10){var c=ok.indexOf(false);if(c<0)break;ok[c]=true;if(one)break}}
+$('h1').onclick=function(){if(!(numv('qty')>0)){$('hm').textContent='先に数量を入れてください。';return}fillFrom(true);note='';render();$('hm').textContent='答えを入れました。式を確認してください。'};
+$('h2').onclick=function(){if(!(numv('qty')>0)){$('hm').textContent='先に数量を入れてください。';return}fillFrom(false);note='';render();$('hm').textContent='最後まで入りました。入った数字と式を見比べてください。'};
+$('h3').onclick=function(){ok=ok.map(function(){return false});note='';render();$('hm').textContent='⑤の最初に戻りました。自分で計算してみましょう。'};
+$('hS').onclick=function(){$('company').value='SAMPLE TRADING CO., LTD.';$('signer').value='Hanako Sato, Export Manager';saveIn();render();$('hm').textContent='見本を入れました。会社名と名前は、自分のものに直してください。'};
+$('hD').onclick=function(){['qty','price','cdate','shipby'].forEach(function(k){$(k).value=DEF[k]});ok=ok.map(function(){return false});saveIn();render();$('hm').textContent='標準Offer（1,600 ctn／USD 17.70）に戻しました。'};
+
+/* ---- 先生用（#teacher） ---- */
+function gapKey(){return '<table><tr><th>#</th><th>書類・欄</th><th>ずれた値</th><th>正しい値</th></tr>'+
+ '<tr><td>1</td><td>SI 荷印（2つ目）</td><td>B20</td><td>B02（PLと同じ）</td></tr>'+
+ '<tr><td>2</td><td>SI 荷受人</td><td>PACIFIC ORCHARD FOODS</td><td>SH TRADING CO., LTD.</td></tr>'+
+ '<tr><td>3</td><td>SI 仕向港</td><td>Shenzhen, China</td><td>Shanghai, China</td></tr>'+
+ '<tr><td>4</td><td>PL 総重量</td><td>1,920 kg</td><td>19,200 kg</td></tr>'+
+ '<tr><td>5</td><td>PL 容積</td><td>269.6 m³</td><td>27.0 m³</td></tr>'+
+ '<tr><td>6</td><td>Invoice 単価・金額</td><td>USD 17.07／27,312.00</td><td>USD 17.70／28,320.00</td></tr></table>'+
+ '<div>補足：#4・#5は、PLのロット行を縦に足しても気づけます（11,520 ＋ 7,680 ＝ 19,200 kg、16.2 ＋ 10.8 ＝ 27.0 m³）。#4は、N.W.（16,320 kg）が G.W. より大きくなる点でも気づけます。紙の「ずれ版」は、会社名を契約書A/Bの見本（PACIFIC ORCHARD FOODS）、荷印を A01／B02、インボイス日付を 10 November 2026 に固定しています。</div>'}
+if(teacher){
+ var tb=$('tbar');tb.style.display='block';
+ tb.innerHTML='<b>先生用</b>　合言葉：<b>'+WORD+'</b><br><button id="tA">⑤を全部入れる</button> <button id="tS">SIを開く</button> <button id="tG">ずれ版：OFF</button> <button id="tC">最初から</button><div id="gapkey"></div>';
+ $('tA').onclick=function(){ok=ok.map(function(){return true});render()};
+ $('tS').onclick=function(){siOpen=true;render()};
+ $('tG').onclick=function(){gap=!gap;this.textContent='ずれ版：'+(gap?'ON':'OFF');$('gapkey').innerHTML=gap?gapKey():'';render()};
+ $('tC').onclick=function(){ok=ok.map(function(){return false});siOpen=false;gap=false;$('tG').textContent='ずれ版：OFF';$('gapkey').innerHTML='';render()};
+}
+loadAll();render();
+})();
+</script>
+</body></html>
